@@ -57,4 +57,4 @@ Project Link: [https://github.com/YannBriancon/spring-jpa-query-count](https://g
 [issues-shield]: https://img.shields.io/github/issues/YannBriancon/spring-jpa-query-count.svg?style=flat-square
 [issues-url]: https://github.com/YannBriancon/spring-jpa-query-count/issues
 [license-shield]: https://img.shields.io/github/license/YannBriancon/spring-jpa-query-count.svg?style=flat-square
-[license-url]: https://github.com/YannBriancon/spring-jpa-query-count/blob/master/LICENSE.txt
+[license-url]: https://github.com/YannBriancon/spring-jpa-query-count/blob/master/LICENSE
