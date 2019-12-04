@@ -1,4 +1,4 @@
-package com.yannbriancon;
+package com.yannbriancon.interceptor;
 
 import com.yannbriancon.util.Example;
 import com.yannbriancon.util.ExampleRepository;
@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = SpringJpaQueryCountApplication.class)
+@SpringBootTest
 @Transactional
-class SpringJpaQueryCountApplicationTests {
+class HibernateQueryCountInterceptorTests {
 
     @Autowired
     private ExampleRepository exampleRepository;
