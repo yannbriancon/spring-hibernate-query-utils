@@ -1,4 +1,4 @@
-package com.yannbriancon;
+package com.yannbriancon.interceptor;
 
 import org.hibernate.EmptyInterceptor;
 import org.springframework.stereotype.Component;

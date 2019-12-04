@@ -1,6 +1,6 @@
 package com.yannbriancon.config;
 
-import com.yannbriancon.HibernateQueryCountInterceptor;
+import com.yannbriancon.interceptor.HibernateQueryCountInterceptor;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
