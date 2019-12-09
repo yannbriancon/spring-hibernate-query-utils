@@ -4,13 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.yannbriancon</groupId>
-    <artifactId>spring-jpa-query-count</artifactId>
+    <artifactId>spring-hibernate-query-count</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>spring-jpa-query-count</name>
-    <description>Library to count the queries generated with Spring JPA</description>
-    <url>https://github.com/YannBriancon/spring-jpa-query-count</url>
+    <name>spring-hibernate-query-count</name>
+    <description>Library to count the queries generated with Spring and Hibernate</description>
+    <url>https://github.com/yannbriancon/spring-hibernate-query-count</url>
 
     <developers>
         <developer>
@@ -28,9 +28,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/YannBriancon/spring-jpa-query-count</url>
-        <connection>scm:git:git@github.com:YannBriancon/spring-jpa-query-count.git</connection>
-        <developerConnection>scm:git:git@github.com:YannBriancon/spring-jpa-query-count.git</developerConnection>
+        <url>https://github.com/yannbriancon/spring-hibernate-query-count</url>
+        <connection>scm:git:git@github.com:yannbriancon/spring-hibernate-query-count.git</connection>
+        <developerConnection>scm:git:git@github.com:yannbriancon/spring-hibernate-query-count.git</developerConnection>
     </scm>
 
     <properties>

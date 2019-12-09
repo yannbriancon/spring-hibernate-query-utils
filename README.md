@@ -17,17 +17,17 @@
 <br />
 <p align="center">
 
-  <h3 align="center">Spring JPA Query Count</h3>
+  <h3 align="center">Spring Hibernate Query Count</h3>
 
   <p align="center">
     <b>No more N+1 queries in your Spring applications</b>
     <br />
-    Spring JPA Query Count provides an easy way of counting the queries generated with JPA and Hibernate
+    Spring Hibernate Query Count: an easy way of counting queries in a Spring/Hibernate application 
     <br />
     <br />
-    <a href="https://github.com/YannBriancon/spring-jpa-query-count/issues">Report Bug</a>
+    <a href="https://github.com/yannbriancon/spring-hibernate-query-count/issues">Report Bug</a>
     ·
-    <a href="https://github.com/YannBriancon/spring-jpa-query-count/issues">Request Feature</a>
+    <a href="https://github.com/yannbriancon/spring-hibernate-query-count/issues">Request Feature</a>
   </p>
 </p>
 
@@ -48,7 +48,8 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
     
-Spring JPA Query Count provides an easy way of counting the queries generated with JPA and Hibernate in each thread.
+Spring Hibernate Query Count provides an easy way of counting the queries generated in a Spring application using 
+Hibernate. The library allows you to count exact number of queries generated in each thread.
 
 If you develop Spring applications using Hibernate, you have probably already encountered performance issues caused by n+1 queries.
 
@@ -77,7 +78,7 @@ Add dependency to your project inside your `pom.xml` file
 ```xml
 <dependency>
     <groupId>com.yannbriancon</groupId>
-    <artifactId>spring-jpa-query-count</artifactId>
+    <artifactId>spring-hibernate-query-count</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
@@ -95,18 +96,18 @@ Distributed under the MIT License. See [`LICENSE`][license-url] for more informa
 
 [@YBriancon](https://twitter.com/YBriancon) - yann.briancon.73@gmail.com
 
-Project Link: [https://github.com/YannBriancon/spring-jpa-query-count](https://github.com/YannBriancon/spring-jpa-query-count)
+Project Link: [https://github.com/yannbriancon/spring-hibernate-query-count](https://github.com/yannbriancon/spring-hibernate-query-count)
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/YannBriancon/spring-jpa-query-count.svg?style=flat-square
-[contributors-url]: https://github.com/YannBriancon/spring-jpa-query-count/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/YannBriancon/spring-jpa-query-count.svg?style=flat-square
-[forks-url]: https://github.com/YannBriancon/spring-jpa-query-count/network/members
-[stars-shield]: https://img.shields.io/github/stars/YannBriancon/spring-jpa-query-count.svg?style=flat-square
-[stars-url]: https://github.com/YannBriancon/spring-jpa-query-count/stargazers
-[issues-shield]: https://img.shields.io/github/issues/YannBriancon/spring-jpa-query-count.svg?style=flat-square
-[issues-url]: https://github.com/YannBriancon/spring-jpa-query-count/issues
-[license-shield]: https://img.shields.io/github/license/YannBriancon/spring-jpa-query-count.svg?style=flat-square
-[license-url]: https://github.com/YannBriancon/spring-jpa-query-count/blob/master/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
+[contributors-url]: https://github.com/yannbriancon/spring-hibernate-query-count/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
+[forks-url]: https://github.com/yannbriancon/spring-hibernate-query-count/network/members
+[stars-shield]: https://img.shields.io/github/stars/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
+[stars-url]: https://github.com/yannbriancon/spring-hibernate-query-count/stargazers
+[issues-shield]: https://img.shields.io/github/issues/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
+[issues-url]: https://github.com/yannbriancon/spring-hibernate-query-count/issues
+[license-shield]: https://img.shields.io/github/license/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
+[license-url]: https://github.com/yannbriancon/spring-hibernate-query-count/blob/master/LICENSE
