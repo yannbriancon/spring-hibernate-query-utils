@@ -40,6 +40,7 @@
 * [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
+* [Usage](#usage)
 * [License](#license)
 * [Contact](#contact)
 
@@ -82,6 +83,53 @@ Add dependency to your project inside your `pom.xml` file
     <version>0.1.0</version>
 </dependency>
 ```
+
+
+<!-- USAGE -->
+## Usage
+
+Now that you added the dependency, you can instantiate a HibernateQueryCountInterceptor object and start to use it.
+
+Three methods are available:
+* startCounter: Initializes the query count to 0 and allows the queries to increment the count.
+* getQueryCount: Returns the current query count for the Thread concerned as a Long.
+* removeCounter: Removes the instance of the queryCount that is a ThreadLocal<Long> and stops the counting.
+
+The count is local to a Thread. This choice was made to have a consistent count for a running application and avoid other threads to alter the count.
+
+Example in a test:
+
+```java
+...
+import com.yannbriancon.interceptor.HibernateQueryCountInterceptor;
+
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@Transactional
+public class FileUploadResourceIntTest {
+    @Autowired
+    private HibernateQueryCountInterceptor hibernateQueryCountInterceptor;
+
+    @Test
+    public void getFiles_isOk() throws Exception {
+        // Initialize the query to 0 and allow the counting
+        hibernateQueryCountInterceptor.startCounter();
+
+        File file = new File();
+        
+        // The method saveAndFlush will force the query to be executed directly and trigger the count incrementation.
+        // The method save would not force it.
+        // We would need to wait the end of the transaction to be sure the query has been executed and the count updated.
+        // see https://www.baeldung.com/spring-data-jpa-save-saveandflush for more details
+        fileRepository.saveAndFlush(file)
+
+        // Get the query count for this thread and check that it is equal to 1
+        Assertions.assertThat(hibernateQueryCountInterceptor.getQueryCount()).isEqualTo(1);
+    }
+}
+```
+
 
 
 <!-- LICENSE -->
