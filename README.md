@@ -112,7 +112,7 @@ public class FileUploadResourceIntTest {
     private HibernateQueryCountInterceptor hibernateQueryCountInterceptor;
 
     @Test
-    public void getFiles_isOk() throws Exception {
+    public void saveFile_isOk() throws Exception {
         // Initialize the query to 0 and allow the counting
         hibernateQueryCountInterceptor.startCounter();
 
@@ -121,10 +121,11 @@ public class FileUploadResourceIntTest {
         // The method saveAndFlush will force the query to be executed directly and trigger the count incrementation.
         // The method save would not force it.
         // We would need to wait the end of the transaction to be sure the query has been executed and the count updated.
-        // see https://www.baeldung.com/spring-data-jpa-save-saveandflush for more details
+        // see https://www.baeldung.com/spring-data-jpa-save-saveandflush for more details.
         fileRepository.saveAndFlush(file)
 
-        // Get the query count for this thread and check that it is equal to 1
+        // Get the query count for this thread and check that it is equal to 1.
+        // The count is checked and we detect potential n+1 queries.
         Assertions.assertThat(hibernateQueryCountInterceptor.getQueryCount()).isEqualTo(1);
     }
 }
