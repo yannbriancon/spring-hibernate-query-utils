@@ -82,7 +82,7 @@ Add dependency to your project inside your `pom.xml` file
 <dependency>
     <groupId>com.yannbriancon</groupId>
     <artifactId>spring-hibernate-query-count</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
