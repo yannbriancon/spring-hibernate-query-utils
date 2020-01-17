@@ -50,6 +50,7 @@
 ## About The Project
 
 While investigation the performance problem in my SpringBoot application, I discovered the infamous N+1 queries problem (more details on this problem [here](https://medium.com/@mansoor_ali/hibernate-n-1-queries-problem-8a926b69f618)) that was killing the performance of my services.
+
 After managing to fix this problem, I had to find a way to detect it and raise the alarm to anoid any new service with this problem.
 
 That is why I created Spring Hibernate Query Count to provide an easy way of counting the queries generated in a Spring application using Hibernate.
