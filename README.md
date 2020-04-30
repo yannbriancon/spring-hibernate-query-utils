@@ -22,7 +22,7 @@
   <p align="center">
     <b>No more N+1 queries in your Spring applications</b>
     <br />
-    Spring Hibernate Query Utils: an easy way of counting queries in a Spring/Hibernate application 
+    Spring Hibernate Query Utils: an easy way of detecting N+1 queries and counting queries in a Spring/Hibernate application 
     <br />
     <br />
     <a href="https://github.com/yannbriancon/spring-hibernate-query-count/issues">Report Bug</a>
@@ -53,18 +53,16 @@ While investigating the performance problems in my SpringBoot application, I dis
 
 After managing to fix this problem, I had to find a way to detect it and raise the alarm to avoid any developer to introduce new ones.
 
-That is why I created Spring Hibernate Query Utils to provide an easy way of counting the queries generated in a Spring application using Hibernate.
+That is why I created Spring Hibernate Query Utils to provide an easy way of detecting N+1 queries and counting the queries generated in a Spring application using Hibernate.
 
-If you develop Spring applications using Hibernate, you have probably also encountered performance issues caused by n+1 queries.
+If you develop Spring applications using Hibernate, you have probably also encountered performance issues caused by N+1 queries.
 
 This library provides several benefits:
 
-* Counting the exact number of queries generated for each service or resource
-* Detecting the n+1 queries problem in your Spring tests and raise the alarm before having performance issues in production
-* Avoiding performance regressions by adding an assert on the query count in your integration tests
-* Improving the onboarding of new developers by showing them the impact of the n+1 queries problem
+* Kill the N+1 queries problem by throwing an exception when detecting it in your tests
+* Count the exact number of queries generated for each service or resource
+* Improve the onboarding of new developers by making them understand the impact of the N+1 queries problem
 * Improve the debugging by seeing which query is executed and when
-
 
 
 <!-- GETTING STARTED -->
@@ -81,7 +79,7 @@ Add dependency to your project inside your `pom.xml` file
 ```xml
 <dependency>
     <groupId>com.yannbriancon</groupId>
-    <artifactId>spring-hibernate-query-count</artifactId>
+    <artifactId>spring-hibernate-query-utils</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -90,12 +88,12 @@ Add dependency to your project inside your `pom.xml` file
 <!-- USAGE -->
 ## Usage
 
-Now that you added the dependency, you can instantiate a HibernateQueryCountInterceptor object and start to use it.
+Now that you added the dependency, you can instantiate a **HibernateQueryInterceptor** and start to use it.
 
 Three methods are available:
-* startCounter: Initializes the query count to 0 and allows the queries to increment the count.
+* startQueryCount: Initializes the query count to 0 and allows the queries to increment the count.
 * getQueryCount: Returns the current query count for the Thread concerned as a Long.
-* removeCounter: Removes the instance of the queryCount that is a ThreadLocal<Long> and stops the counting.
+* removeQueryCount: Removes the instance of the queryCount that is a ThreadLocal<Long> and stops the counting.
 
 The count is local to a Thread. This choice was made to have a consistent count for a running application and avoid other threads to alter the count.
 
@@ -103,7 +101,7 @@ Example in a test:
 
 ```java
 ...
-import com.yannbriancon.interceptor.HibernateQueryCountInterceptor;
+import com.yannbriancon.interceptor.HibernateQueryInterceptor;
 
 
 @RunWith(SpringRunner.class)
@@ -111,12 +109,12 @@ import com.yannbriancon.interceptor.HibernateQueryCountInterceptor;
 @Transactional
 public class NotificationResourceIntTest {
     @Autowired
-    private HibernateQueryCountInterceptor hibernateQueryCountInterceptor;
+    private HibernateQueryInterceptor hibernateQueryInterceptor;
 
     @Test
     public void saveFile_isOk() throws Exception {
         // Initialize the query to 0 and allow the counting
-        hibernateQueryCountInterceptor.startCounter();
+        hibernateQueryInterceptor.startCounter();
 
         // Call the resource that we want to test
         MvcResult result = mvc.perform(get("/rest/notifications"))
@@ -125,7 +123,7 @@ public class NotificationResourceIntTest {
 
         // Get the query count for this thread and check that it is equal to the number of query you expect, let's say 4.
         // The count is checked and we detect potential n+1 queries.
-        Assertions.assertThat(hibernateQueryCountInterceptor.getQueryCount()).isEqualTo(4);
+        Assertions.assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(4);
     }
 }
 ```
