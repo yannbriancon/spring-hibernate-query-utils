@@ -17,12 +17,12 @@
 <br />
 <p align="center">
 
-  <h3 align="center">Spring Hibernate Query Count</h3>
+  <h3 align="center">Spring Hibernate Query Utils</h3>
 
   <p align="center">
     <b>No more N+1 queries in your Spring applications</b>
     <br />
-    Spring Hibernate Query Count: an easy way of counting queries in a Spring/Hibernate application 
+    Spring Hibernate Query Utils: an easy way of counting queries in a Spring/Hibernate application 
     <br />
     <br />
     <a href="https://github.com/yannbriancon/spring-hibernate-query-count/issues">Report Bug</a>
@@ -53,7 +53,7 @@ While investigating the performance problems in my SpringBoot application, I dis
 
 After managing to fix this problem, I had to find a way to detect it and raise the alarm to avoid any developer to introduce new ones.
 
-That is why I created Spring Hibernate Query Count to provide an easy way of counting the queries generated in a Spring application using Hibernate.
+That is why I created Spring Hibernate Query Utils to provide an easy way of counting the queries generated in a Spring application using Hibernate.
 
 If you develop Spring applications using Hibernate, you have probably also encountered performance issues caused by n+1 queries.
 
