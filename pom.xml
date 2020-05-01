@@ -4,13 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.yannbriancon</groupId>
-    <artifactId>spring-hibernate-query-count</artifactId>
+    <artifactId>spring-hibernate-query-utils</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>spring-hibernate-query-count</name>
-    <description>Library to count the queries generated with Spring and Hibernate</description>
-    <url>https://github.com/yannbriancon/spring-hibernate-query-count</url>
+    <name>spring-hibernate-query-utils</name>
+    <description>Library giving tools to detect N+1 queries and count the queries generated with Spring and
+        Hibernate</description>
+    <url>https://github.com/yannbriancon/spring-hibernate-query-utils</url>
 
     <developers>
         <developer>
@@ -28,9 +29,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/yannbriancon/spring-hibernate-query-count</url>
-        <connection>scm:git:git@github.com:yannbriancon/spring-hibernate-query-count.git</connection>
-        <developerConnection>scm:git:git@github.com:yannbriancon/spring-hibernate-query-count.git</developerConnection>
+        <url>https://github.com/yannbriancon/spring-hibernate-query-utils</url>
+        <connection>scm:git:git@github.com:yannbriancon/spring-hibernate-query-utils.git</connection>
+        <developerConnection>scm:git:git@github.com:yannbriancon/spring-hibernate-query-utils.git</developerConnection>
     </scm>
 
     <properties>
@@ -41,13 +42,23 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>2.2.1.RELEASE</version>
-        <relativePath/> <!-- lookup parent from util -->
+        <relativePath/> <!-- lookup parent from entity -->
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <dependency>

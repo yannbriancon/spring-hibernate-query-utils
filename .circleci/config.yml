@@ -8,7 +8,7 @@ jobs:
     docker:
       - image: circleci/openjdk:8-jdk
 
-    working_directory: ~/spring-hibernate-query-count
+    working_directory: ~/spring-hibernate-query-utils
 
     environment:
       # Customize the JVM maximum heap limit
