@@ -6,25 +6,35 @@ import org.springframework.stereotype.Component;
 @Component
 public class HibernateQueryInterceptor extends EmptyInterceptor {
 
-    private transient ThreadLocal<Long> queryCount = new ThreadLocal<>();
+    private transient ThreadLocal<Long> threadQueryCount = new ThreadLocal<>();
 
-    public void startCounter() {
-        queryCount.set(0L);
     }
 
+    /**
+     * Start or reset the query count to 0 for the considered thread
+     */
+    public void startQueryCount() {
+        threadQueryCount.set(0L);
+    }
+
+    /**
+     * Get the query count for the considered thread
+     */
     public Long getQueryCount() {
-        return queryCount.get();
+        return threadQueryCount.get();
     }
 
-    public void removeCounter() {
-        queryCount.remove();
-    }
-
+    /**
+     * Increment the query count for the considered thread for each new statement if the count has been initialized
+     *
+     * @param sql Query to be executed
+     * @return Query to be executed
+     */
     @Override
     public String onPrepareStatement(String sql) {
-        Long count = queryCount.get();
+        Long count = threadQueryCount.get();
         if (count != null) {
-            queryCount.set(count + 1);
+            threadQueryCount.set(count + 1);
         }
         return super.onPrepareStatement(sql);
     }
