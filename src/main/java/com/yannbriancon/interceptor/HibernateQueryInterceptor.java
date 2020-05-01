@@ -4,7 +4,7 @@ import org.hibernate.EmptyInterceptor;
 import org.springframework.stereotype.Component;
 
 @Component
-public class HibernateQueryCountInterceptor extends EmptyInterceptor {
+public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     private transient ThreadLocal<Long> queryCount = new ThreadLocal<>();
 

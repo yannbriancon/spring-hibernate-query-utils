@@ -20,24 +20,24 @@ class HibernateQueryCountInterceptorTests {
     private ExampleRepository exampleRepository;
 
     @Autowired
-    private HibernateQueryCountInterceptor hibernateQueryCountInterceptor;
+    private HibernateQueryInterceptor hibernateQueryInterceptor;
 
     @Test
     void countIsOkWhenCallingARepository() {
-        hibernateQueryCountInterceptor.startCounter();
+        hibernateQueryInterceptor.startCounter();
 
         Example example = new Example("my new example");
         exampleRepository.save(example);
 
-        assertThat(hibernateQueryCountInterceptor.getQueryCount()).isEqualTo(1);
+        assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(1);
 
         exampleRepository.findAll();
 
-        assertThat(hibernateQueryCountInterceptor.getQueryCount()).isEqualTo(2);
+        assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(2);
 
-        hibernateQueryCountInterceptor.removeCounter();
+        hibernateQueryInterceptor.removeCounter();
 
-        assertThat(hibernateQueryCountInterceptor.getQueryCount()).isNull();
+        assertThat(hibernateQueryInterceptor.getQueryCount()).isNull();
     }
 
 }
