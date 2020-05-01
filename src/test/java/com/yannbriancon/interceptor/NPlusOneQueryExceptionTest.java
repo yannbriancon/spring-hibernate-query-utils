@@ -16,7 +16,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest("hibernate.query.interceptor.error-level=EXCEPTION")
 @Transactional
 class NPlusOneQueryExceptionTest {
 
