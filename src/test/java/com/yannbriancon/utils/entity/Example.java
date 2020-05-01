@@ -1,10 +1,13 @@
-package com.yannbriancon.util;
+package com.yannbriancon.utils.entity;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Entity
@@ -18,11 +21,16 @@ public class Example {
     @Column(name = "description")
     private String description;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private DomainUser author;
+
     public Example() {
     }
 
-    public Example(String description) {
+    public Example(String description, DomainUser author) {
         this.description = description;
+        this.author = author;
     }
 
     public Long getId() {
@@ -39,5 +47,13 @@ public class Example {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public DomainUser getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(DomainUser author) {
+        this.author = author;
     }
 }
