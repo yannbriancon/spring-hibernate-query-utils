@@ -41,6 +41,10 @@
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
 * [Usage](#usage)
+  * [N+1 Query Detection](#n+1-query-detection)
+    * [Detection](#n+1-query-detection)
+    * [Configuration](#n+1-query-detection)
+  * [Query Count](#query-count)
 * [License](#license)
 * [Contact](#contact)
 
@@ -75,7 +79,7 @@ This library provides several benefits:
 ### Installation
 ##### Maven
 
-Add dependency to your project inside your `pom.xml` file
+Add the dependency to your project inside your `pom.xml` file
 ```xml
 <dependency>
     <groupId>com.yannbriancon</groupId>
@@ -88,12 +92,57 @@ Add dependency to your project inside your `pom.xml` file
 <!-- USAGE -->
 ## Usage
 
-Now that you added the dependency, you can instantiate a **HibernateQueryInterceptor** and start to use it.
+### N+1 Query Detection
+
+#### Detection
+
+The N+1 query detection is set up by default.
+
+Each time a N+1 query is detected in a transaction, a log of level error will be sent.
+
+Here is an example:
+
+
+#### Configuration
+
+By default the detection of a N+1 query logs an error to avoid breaking your code. 
+
+However, my advise is to override the default error level to throw exceptions for your test profile. Then you 
+will easily detect which tests are failing and be able to flag them and set the error level to error logs only on 
+those tests.
+
+To do this, you can configure the error level when a N+1 query is detected using the property `hibernate.query.interceptor.error-level`. 
+
+4 levels are available to handle the detection of N+1 queries:
+
+* **INFO**: Log a message of level info
+* **WARN**: Log a message of level warn
+* **ERROR** (default): Log a message of level error
+* **EXCEPTION**: Throw a NPlusOneQueryException
+
+Here are two examples on how to use it globally or for a specific test:
+
+application.properties:
+```yaml
+hibernate.query.interceptor.error-level=INFO
+```
+
+Tests:
+```java
+@SpringBootTest("hibernate.query.interceptor.error-level=INFO")
+@Transactional
+class NPlusOneQueryLoggingTest {
+    ...
+}
+```
+
+### Query Count
+
+To start counting the generated queries, you need to instantiate a **HibernateQueryInterceptor**.
 
 Three methods are available:
 * startQueryCount: Initializes the query count to 0 and allows the queries to increment the count.
 * getQueryCount: Returns the current query count for the Thread concerned as a Long.
-* removeQueryCount: Removes the instance of the queryCount that is a ThreadLocal<Long> and stops the counting.
 
 The count is local to a Thread. This choice was made to have a consistent count for a running application and avoid other threads to alter the count.
 
@@ -114,7 +163,7 @@ public class NotificationResourceIntTest {
     @Test
     public void saveFile_isOk() throws Exception {
         // Initialize the query to 0 and allow the counting
-        hibernateQueryInterceptor.startCounter();
+        hibernateQueryInterceptor.startQueryCount();
 
         // Call the resource that we want to test
         MvcResult result = mvc.perform(get("/rest/notifications"))
