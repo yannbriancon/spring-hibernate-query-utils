@@ -4,8 +4,8 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
-import com.yannbriancon.utils.entity.Example;
-import com.yannbriancon.utils.repository.ExampleRepository;
+import com.yannbriancon.utils.entity.Message;
+import com.yannbriancon.utils.repository.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +32,7 @@ import static org.mockito.Mockito.verify;
 class NPlusOneQueryLoggingTest {
 
     @Autowired
-    private ExampleRepository exampleRepository;
+    private MessageRepository messageRepository;
 
     @Mock
     private Appender mockedAppender;
@@ -47,22 +48,31 @@ class NPlusOneQueryLoggingTest {
 
     @Test
     void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
-        // Trigger N+1 query
-        List<Example> examples = exampleRepository.findAll();
-        examples.get(0).getAuthor().getBrother();
+        // Fetch the 2 messages without the authors
+        List<Message> messages = messageRepository.findAll();
 
-        verify(mockedAppender, times(1)).doAppend(loggingEventCaptor.capture());
+        // Trigger N+1 query
+        List<String> names = messages.stream()
+                .map(message -> message.getAuthor().getName())
+                .collect(Collectors.toList());
+
+        verify(mockedAppender, times(2)).doAppend(loggingEventCaptor.capture());
 
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
-        assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.DomainUser")
+        assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.User")
                 .isEqualTo(loggingEvent.getMessage());
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 
     @Test
     void nPlusOneQueryDetection_isNotLoggingWhenNotDetectingNPlusOneQuery() {
+        // Fetch the 2 messages with the authors
+        List<Message> messages = messageRepository.getAllBy();
+
         // Do not trigger N+1 query
-        exampleRepository.getAllBy();
+        List<String> names = messages.stream()
+                .map(message -> message.getAuthor().getName())
+                .collect(Collectors.toList());
 
         verify(mockedAppender, times(0)).doAppend(any());
     }

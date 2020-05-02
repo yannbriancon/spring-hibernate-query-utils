@@ -1,8 +1,8 @@
 package com.yannbriancon.interceptor;
 
-import com.yannbriancon.utils.entity.DomainUser;
-import com.yannbriancon.utils.repository.DomainUserRepository;
-import com.yannbriancon.utils.repository.ExampleRepository;
+import com.yannbriancon.utils.entity.User;
+import com.yannbriancon.utils.repository.MessageRepository;
+import com.yannbriancon.utils.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +18,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class QueryCountTest {
 
     @Autowired
-    private DomainUserRepository domainUserRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    private ExampleRepository exampleRepository;
+    private MessageRepository messageRepository;
 
     @Autowired
     private HibernateQueryInterceptor hibernateQueryInterceptor;
@@ -30,7 +30,7 @@ class QueryCountTest {
     void queryCount_isOkWhenCallingRepository() {
         hibernateQueryInterceptor.startQueryCount();
 
-        exampleRepository.findAll();
+        messageRepository.findAll();
 
         assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(1);
 
@@ -38,11 +38,11 @@ class QueryCountTest {
 
     @Test
     void queryCount_isOkWhenSaveQueryIsExecutedBeforeStartingTheCount() {
-        domainUserRepository.saveAndFlush(new DomainUser());
+        userRepository.saveAndFlush(new User());
 
         hibernateQueryInterceptor.startQueryCount();
 
-        exampleRepository.findAll();
+        messageRepository.findAll();
 
         assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(1);
     }
