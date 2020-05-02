@@ -122,12 +122,12 @@ To do this, you can configure the error level when a N+1 query is detected using
 
 Here are two examples on how to use it globally or for a specific test:
 
-application.properties:
+* In application.properties:
 ```yaml
 hibernate.query.interceptor.error-level=INFO
 ```
 
-Tests:
+* In tests:
 ```java
 @SpringBootTest("hibernate.query.interceptor.error-level=INFO")
 @Transactional
