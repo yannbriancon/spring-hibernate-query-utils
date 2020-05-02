@@ -96,20 +96,36 @@ Add the dependency to your project inside your `pom.xml` file
 
 #### Detection
 
-The N+1 query detection is set up by default.
+The N+1 query detection is enabled by default so no configuration is needed.
 
 Each time a N+1 query is detected in a transaction, a log of level error will be sent.
 
 Here is an example:
 
+```java
+@Test
+void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
+    // Trigger N+1 query
+    List<Example> examples = exampleRepository.findAll();
+    examples.get(0).getAuthor().getBrother();
+
+    verify(mockedAppender, times(1)).doAppend(loggingEventCaptor.capture());
+
+    LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
+    assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.DomainUser")
+            .isEqualTo(loggingEvent.getMessage());
+    assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
+}
+```
 
 #### Configuration
 
 By default the detection of a N+1 query logs an error to avoid breaking your code. 
 
-However, my advise is to override the default error level to throw exceptions for your test profile. Then you 
-will easily detect which tests are failing and be able to flag them and set the error level to error logs only on 
-those tests.
+However, my advise is to override the default error level to throw exceptions for your test profile. 
+
+Now you will easily detect which tests are failing and be able to flag them and set the error level to error logs only on 
+those tests while you are fixing them.
 
 To do this, you can configure the error level when a N+1 query is detected using the property `hibernate.query.interceptor.error-level`. 
 
