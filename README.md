@@ -100,21 +100,46 @@ The N+1 query detection is enabled by default so no configuration is needed.
 
 Each time a N+1 query is detected in a transaction, a log of level error will be sent.
 
-Here is an example:
+Here is an example catching the error log:
 
 ```java
-@Test
-void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
-    // Trigger N+1 query
-    List<Example> examples = exampleRepository.findAll();
-    examples.get(0).getAuthor().getBrother();
+@RunWith(MockitoJUnitRunner.class)
+@SpringBootTest
+@Transactional
+class NPlusOneQueryLoggingTest {
 
-    verify(mockedAppender, times(1)).doAppend(loggingEventCaptor.capture());
+    @Autowired
+    private MessageRepository messageRepository;
 
-    LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
-    assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.DomainUser")
-            .isEqualTo(loggingEvent.getMessage());
-    assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
+    @Mock
+    private Appender mockedAppender;
+
+    @Captor
+    private ArgumentCaptor<LoggingEvent> loggingEventCaptor;
+
+    @BeforeEach
+    public void setup() {
+        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.addAppender(mockedAppender);
+    }
+
+    @Test
+    void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
+        // Fetch the 2 messages without the authors
+        List<Message> messages = messageRepository.findAll();
+    
+        // Trigger N+1 query
+        List<String> names = messages.stream()
+                .map(message -> message.getAuthor().getName())
+                .collect(Collectors.toList());
+    
+        verify(mockedAppender, times(2)).doAppend(loggingEventCaptor.capture());
+    
+        LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
+        assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.User")
+                .isEqualTo(loggingEvent.getMessage());
+        assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
+    }
 }
 ```
 
