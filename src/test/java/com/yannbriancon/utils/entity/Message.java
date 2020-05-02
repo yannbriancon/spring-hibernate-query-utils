@@ -11,25 +11,25 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "examples")
-public class Example {
+@Table(name = "messages")
+public class Message {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "description")
-    private String description;
+    @Column(name = "text")
+    private String text;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")
-    private DomainUser author;
+    private User author;
 
-    public Example() {
+    public Message() {
     }
 
-    public Example(String description, DomainUser author) {
-        this.description = description;
+    public Message(String text, User author) {
+        this.text = text;
         this.author = author;
     }
 
@@ -41,19 +41,19 @@ public class Example {
         this.id = id;
     }
 
-    public String getDescription() {
-        return description;
+    public String getText() {
+        return text;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setText(String text) {
+        this.text = text;
     }
 
-    public DomainUser getAuthor() {
+    public User getAuthor() {
         return author;
     }
 
-    public void setAuthor(DomainUser author) {
+    public void setAuthor(User author) {
         this.author = author;
     }
 }
