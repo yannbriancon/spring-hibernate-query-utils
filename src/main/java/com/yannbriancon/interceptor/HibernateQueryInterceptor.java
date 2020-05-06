@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Supplier;
 
 @Component
 @EnableConfigurationProperties(HibernateQueryInterceptorProperties.class)
@@ -19,14 +20,14 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     private transient ThreadLocal<Long> threadQueryCount = new ThreadLocal<>();
 
-    private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities = new ThreadLocal<>();
+    private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
+            ThreadLocal.withInitial(new EmptySetSupplier());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
     private final HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties;
 
     public HibernateQueryInterceptor(HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties) {
-        threadPreviouslyLoadedEntities.set(new HashSet<>());
         this.hibernateQueryInterceptorProperties = hibernateQueryInterceptorProperties;
     }
 
@@ -115,5 +116,11 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
             default:
                 throw new NPlusOneQueryException(errorMessage);
         }
+    }
+}
+
+class EmptySetSupplier implements Supplier<Set<String>> {
+    public Set<String> get(){
+        return new HashSet<>();
     }
 }
