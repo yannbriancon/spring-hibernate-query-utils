@@ -139,7 +139,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
                 LOGGER.error(errorMessage);
                 break;
             default:
-                throw new NPlusOneQueryException(errorMessage);
+                throw new NPlusOneQueryException(errorMessage, new Exception(new Throwable()));
         }
     }
 }

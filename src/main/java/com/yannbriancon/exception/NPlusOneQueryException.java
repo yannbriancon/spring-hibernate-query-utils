@@ -6,6 +6,10 @@ import org.hibernate.CallbackException;
  * Exception triggered when detecting a N+1 query
  */
 public class NPlusOneQueryException extends CallbackException {
+    public NPlusOneQueryException(String message, Exception cause) {
+        super(message, cause);
+    }
+
     public NPlusOneQueryException(String message) {
         super(message);
     }
