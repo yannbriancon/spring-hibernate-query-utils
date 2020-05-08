@@ -24,7 +24,7 @@ class NPlusOneQueryExceptionTest {
     private MessageRepository messageRepository;
 
     @Test
-    void nPlusOneQueryDetection_throwCallbackExceptionWhenFetchingWithoutEntityGraph() {
+    void nPlusOneQueryDetection_throwCallbackExceptionWhenNPlusOneQuery() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
 
@@ -36,12 +36,17 @@ class NPlusOneQueryExceptionTest {
             assert false;
         } catch (NPlusOneQueryException exception) {
             assertThat(exception.getMessage())
-                    .isEqualTo("N+1 query detected for entity: com.yannbriancon.utils.entity.User");
+                    .isEqualTo("N+1 query detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                            "    at com.yannbriancon.interceptor.NPlusOneQueryExceptionTest" +
+                            ".lambda$nPlusOneQueryDetection_throwCallbackExceptionWhenNPlusOneQuery$0" +
+                            "(NPlusOneQueryExceptionTest.java:34)\n" +
+                            "    Hint: Missing Eager fetching configuration on the query " +
+                            "that fetches the object of type com.yannbriancon.utils.entity.User\n");
         }
     }
 
     @Test
-    void nPlusOneQueryDetection_isOkWhenFetchingWithEntityGraph() {
+    void nPlusOneQueryDetection_isNotThrowingExceptionWhenNoNPlusOneQuery() {
         // Fetch the 2 messages with the authors
         List<Message> messages = messageRepository.getAllBy();
 

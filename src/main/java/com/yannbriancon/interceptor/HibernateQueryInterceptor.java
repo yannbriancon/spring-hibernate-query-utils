@@ -88,7 +88,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         if (previouslyLoadedEntities.contains(entityName + id)) {
             previouslyLoadedEntities.remove(entityName + id);
             threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
-            logDetectedNPlusOneQuery(entityName);
+            Optional<String> errorMessage = detectNPlusOneQueries(entityName);
+            errorMessage.ifPresent(this::logDetectedNPlusOneQueries);
         }
 
         previouslyLoadedEntities.add(entityName + id);
@@ -122,12 +123,11 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Log the detected N+1 query or throw an exception depending on the configured error level
+     * Log the detected N+1 query error message or throw an exception depending on the configured error level
      *
-     * @param entityName Name of the entity on which the N+1 query has been detected
+     * @param errorMessage Error message for the N+1 query detected
      */
-    private void logDetectedNPlusOneQuery(String entityName) {
-        String errorMessage = "N+1 query detected for entity: " + entityName;
+    private void logDetectedNPlusOneQueries(String errorMessage) {
         switch (hibernateQueryInterceptorProperties.getErrorLevel()) {
             case INFO:
                 LOGGER.info(errorMessage);
