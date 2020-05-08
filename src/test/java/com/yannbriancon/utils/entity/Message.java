@@ -28,11 +28,6 @@ public class Message {
     public Message() {
     }
 
-    public Message(String text, User author) {
-        this.text = text;
-        this.author = author;
-    }
-
     public Long getId() {
         return id;
     }
