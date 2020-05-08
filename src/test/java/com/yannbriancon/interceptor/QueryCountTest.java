@@ -33,7 +33,6 @@ class QueryCountTest {
         messageRepository.findAll();
 
         assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(1);
-
     }
 
     @Test

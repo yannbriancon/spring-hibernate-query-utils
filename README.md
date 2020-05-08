@@ -41,7 +41,7 @@
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
 * [Usage](#usage)
-  * [N+1 Query Detection](#n1-query-detection)
+  * [N+1 Queries Detection](#n1-queries-detection)
     * [Detection](#detection)
     * [Configuration](#configuration)
   * [Query Count](#query-count)
@@ -53,7 +53,9 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-While investigating the performance problems in my SpringBoot application, I discovered the infamous N+1 queries problem (more details on this problem [here](https://medium.com/@mansoor_ali/hibernate-n-1-queries-problem-8a926b69f618)) that was killing the performance of my services.
+While investigating the performance problems in my SpringBoot application, I discovered the infamous N+1 queries 
+problem that was killing the performance of my services. 
+Check the article [Eliminate Spring Hibernate N+1 Queries](https://medium.com/sipios/eliminate-spring-hibernate-n-plus-1-queries-f0bcf6a83de2?source=friends_link&sk=5ba0f2493af1d8496a46d5f116effa96) for more details.
 
 After managing to fix this problem, I had to find a way to detect it and raise the alarm to avoid any developer to introduce new ones.
 
@@ -84,7 +86,7 @@ Add the dependency to your project inside your `pom.xml` file
 <dependency>
     <groupId>com.yannbriancon</groupId>
     <artifactId>spring-hibernate-query-utils</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
@@ -92,21 +94,21 @@ Add the dependency to your project inside your `pom.xml` file
 <!-- USAGE -->
 ## Usage
 
-### N+1 Query Detection
+### N+1 Queries Detection
 
 #### Detection
 
-The N+1 query detection is enabled by default so no configuration is needed.
+The N+1 queries detection is enabled by default so no configuration is needed.
 
-Each time a N+1 query is detected in a transaction, a log of level error will be sent.
+Each time N+1 queries are detected in a transaction, a log of level error will be sent.
 
-Here is an example catching the error log:
+Here is an example catching the N+1 queries detection error log:
 
 ```java
 @RunWith(MockitoJUnitRunner.class)
 @SpringBootTest
 @Transactional
-class NPlusOneQueryLoggingTest {
+class NPlusOneQueriesLoggingTest {
 
     @Autowired
     private MessageRepository messageRepository;
@@ -124,20 +126,25 @@ class NPlusOneQueryLoggingTest {
     }
 
     @Test
-    void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
+    void nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
-    
-        // Trigger N+1 query
+
+        // The getters trigger N+1 queries
         List<String> names = messages.stream()
                 .map(message -> message.getAuthor().getName())
                 .collect(Collectors.toList());
-    
+
         verify(mockedAppender, times(2)).doAppend(loggingEventCaptor.capture());
-    
+
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
-        assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.User")
-                .isEqualTo(loggingEvent.getMessage());
+        assertThat(loggingEvent.getMessage())
+                .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                        "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
+                        "lambda$nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries$0" +
+                        "(NPlusOneQueriesLoggingTest.java:56)\n" +
+                        "    Hint: Missing Eager fetching configuration on the query that fetches the object of type" +
+                        " com.yannbriancon.utils.entity.User\n");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 }
@@ -145,21 +152,21 @@ class NPlusOneQueryLoggingTest {
 
 #### Configuration
 
-By default the detection of a N+1 query logs an error to avoid breaking your code. 
+By default the detection of N+1 queries logs an error to avoid breaking your code. 
 
-However, my advise is to override the default error level to throw exceptions for your test profile. 
+However, my advice is to override the default error level to throw exceptions for your test profile. 
 
 Now you will easily detect which tests are failing and be able to flag them and set the error level to error logs only on 
 those tests while you are fixing them.
 
-To do this, you can configure the error level when a N+1 query is detected using the property `hibernate.query.interceptor.error-level`. 
+To do this, you can configure the error level when N+1 queries is detected using the property `hibernate.query.interceptor.error-level`. 
 
 4 levels are available to handle the detection of N+1 queries:
 
 * **INFO**: Log a message of level info
 * **WARN**: Log a message of level warn
 * **ERROR** (default): Log a message of level error
-* **EXCEPTION**: Throw a NPlusOneQueryException
+* **EXCEPTION**: Throw a NPlusOneQueriesException
 
 Here are two examples on how to use it globally or for a specific test:
 
@@ -172,7 +179,7 @@ hibernate.query.interceptor.error-level=INFO
 ```java
 @SpringBootTest("hibernate.query.interceptor.error-level=INFO")
 @Transactional
-class NPlusOneQueryLoggingTest {
+class NPlusOneQueriesLoggingTest {
     ...
 }
 ```
@@ -202,7 +209,7 @@ public class NotificationResourceIntTest {
     private HibernateQueryInterceptor hibernateQueryInterceptor;
 
     @Test
-    public void saveFile_isOk() throws Exception {
+    public void getNotification_isOk() throws Exception {
         // Initialize the query to 0 and allow the counting
         hibernateQueryInterceptor.startQueryCount();
 
@@ -211,8 +218,8 @@ public class NotificationResourceIntTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // Get the query count for this thread and check that it is equal to the number of query you expect, let's say 4.
-        // The count is checked and we detect potential n+1 queries.
+        // Get the query count for this thread and check that it is equal to the number of query you expect,
+        // Let's say 4 for the example.
         Assertions.assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(4);
     }
 }

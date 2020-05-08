@@ -1,6 +1,6 @@
 package com.yannbriancon.interceptor;
 
-import com.yannbriancon.exception.NPlusOneQueryException;
+import com.yannbriancon.exception.NPlusOneQueriesException;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.Transaction;
 import org.hibernate.proxy.HibernateProxy;
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -62,7 +63,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     /**
      * Reset previously loaded entities after the end of a transaction to avoid triggering
-     * N+1 query exceptions because of loading same instance in two different transactions
+     * N+1 queries exceptions because of loading same instance in two different transactions
      *
      * @param tx Transaction having been completed
      */
@@ -87,7 +88,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         if (previouslyLoadedEntities.contains(entityName + id)) {
             previouslyLoadedEntities.remove(entityName + id);
             threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
-            logDetectedNPlusOneQuery(entityName);
+            Optional<String> errorMessage = detectNPlusOneQueries(entityName);
+            errorMessage.ifPresent(this::logDetectedNPlusOneQueries);
         }
 
         previouslyLoadedEntities.add(entityName + id);
@@ -97,12 +99,35 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Log the detected N+1 query or throw an exception depending on the configured error level
+     * Detect the N+1 queries by checking if the stack trace contains an Hibernate Proxy on the Entity
      *
-     * @param entityName Name of the entity on which the N+1 query has been detected
+     * @param entityName Name of the entity
+     * @return If N+1 queries detected, return error message corresponding to the N+1 queries
      */
-    private void logDetectedNPlusOneQuery(String entityName) {
-        String errorMessage = "N+1 query detected for entity: " + entityName;
+    private Optional<String> detectNPlusOneQueries(String entityName) {
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+        for (int i = 0; i + 1 < stackTraceElements.length; i++) {
+            StackTraceElement stackTraceElement = stackTraceElements[i];
+
+            if (stackTraceElement.getClassName().indexOf(entityName) == 0) {
+                String errorMessage = "N+1 queries detected on a getter of the entity " + entityName +
+                        "\n    at " + stackTraceElements[i + 1].toString() +
+                        "\n    Hint: Missing Eager fetching configuration on the query that fetches the object of " +
+                        "type " + entityName + "\n";
+                return Optional.of(errorMessage);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Log the detected N+1 queries error message or throw an exception depending on the configured error level
+     *
+     * @param errorMessage Error message for the N+1 queries detected
+     */
+    private void logDetectedNPlusOneQueries(String errorMessage) {
         switch (hibernateQueryInterceptorProperties.getErrorLevel()) {
             case INFO:
                 LOGGER.info(errorMessage);
@@ -114,13 +139,13 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
                 LOGGER.error(errorMessage);
                 break;
             default:
-                throw new NPlusOneQueryException(errorMessage);
+                throw new NPlusOneQueriesException(errorMessage, new Exception(new Throwable()));
         }
     }
 }
 
 class EmptySetSupplier implements Supplier<Set<String>> {
-    public Set<String> get(){
+    public Set<String> get() {
         return new HashSet<>();
     }
 }

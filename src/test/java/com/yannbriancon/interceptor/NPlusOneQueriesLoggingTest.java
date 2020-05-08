@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verify;
 @RunWith(MockitoJUnitRunner.class)
 @SpringBootTest
 @Transactional
-class NPlusOneQueryLoggingTest {
+class NPlusOneQueriesLoggingTest {
 
     @Autowired
     private MessageRepository messageRepository;
@@ -47,11 +47,11 @@ class NPlusOneQueryLoggingTest {
     }
 
     @Test
-    void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
+    void nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
 
-        // Trigger N+1 query
+        // The getters trigger N+1 queries
         List<String> names = messages.stream()
                 .map(message -> message.getAuthor().getName())
                 .collect(Collectors.toList());
@@ -59,20 +59,20 @@ class NPlusOneQueryLoggingTest {
         verify(mockedAppender, times(2)).doAppend(loggingEventCaptor.capture());
 
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
-        assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.User")
-                .isEqualTo(loggingEvent.getMessage());
+        assertThat(loggingEvent.getMessage())
+                .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                        "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
+                        "lambda$nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries$0" +
+                        "(NPlusOneQueriesLoggingTest.java:56)\n" +
+                        "    Hint: Missing Eager fetching configuration on the query that fetches the object of type" +
+                        " com.yannbriancon.utils.entity.User\n");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 
     @Test
-    void nPlusOneQueryDetection_isNotLoggingWhenNotDetectingNPlusOneQuery() {
-        // Fetch the 2 messages with the authors
-        List<Message> messages = messageRepository.getAllBy();
-
-        // Do not trigger N+1 query
-        List<String> names = messages.stream()
-                .map(message -> message.getAuthor().getName())
-                .collect(Collectors.toList());
+    void nPlusOneQueriesDetection_isNotLoggingWhenNoNPlusOneQueries() {
+        // Fetch the messages and does not trigger N+1 queries
+        messageRepository.findById(1L);
 
         verify(mockedAppender, times(0)).doAppend(any());
     }

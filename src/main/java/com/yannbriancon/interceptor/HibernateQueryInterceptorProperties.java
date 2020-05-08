@@ -14,7 +14,7 @@ public class HibernateQueryInterceptorProperties implements Serializable {
     }
 
     /**
-     * Error level for the N+1 query detection.
+     * Error level for the N+1 queries detection.
      */
     private ErrorLevel errorLevel = ErrorLevel.ERROR;
 
