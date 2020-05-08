@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -97,6 +98,30 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
+     * Detect the N+1 queries by checking if the stack trace contains an Hibernate Proxy on the Entity
+     *
+     * @param entityName Name of the entity
+     * @return If N+1 queries detected, return error message corresponding to the N+1 queries
+     */
+    private Optional<String> detectNPlusOneQueries(String entityName) {
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+        for (int i = 0; i + 1 < stackTraceElements.length; i++) {
+            StackTraceElement stackTraceElement = stackTraceElements[i];
+
+            if (stackTraceElement.getClassName().indexOf(entityName) == 0) {
+                String errorMessage = "N+1 queries detected on a getter of the entity " + entityName +
+                        "\n    at " + stackTraceElements[i + 1].toString() +
+                        "\n    Hint: Missing Eager fetching configuration on the query that fetches the object of " +
+                        "type " + entityName + "\n";
+                return Optional.of(errorMessage);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
      * Log the detected N+1 query or throw an exception depending on the configured error level
      *
      * @param entityName Name of the entity on which the N+1 query has been detected
@@ -120,7 +145,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 }
 
 class EmptySetSupplier implements Supplier<Set<String>> {
-    public Set<String> get(){
+    public Set<String> get() {
         return new HashSet<>();
     }
 }
