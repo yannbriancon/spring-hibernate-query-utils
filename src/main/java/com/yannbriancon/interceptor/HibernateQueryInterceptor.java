@@ -1,6 +1,6 @@
 package com.yannbriancon.interceptor;
 
-import com.yannbriancon.exception.NPlusOneQueryException;
+import com.yannbriancon.exception.NPlusOneQueriesException;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.Transaction;
 import org.hibernate.proxy.HibernateProxy;
@@ -63,7 +63,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     /**
      * Reset previously loaded entities after the end of a transaction to avoid triggering
-     * N+1 query exceptions because of loading same instance in two different transactions
+     * N+1 queries exceptions because of loading same instance in two different transactions
      *
      * @param tx Transaction having been completed
      */
@@ -123,9 +123,9 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Log the detected N+1 query error message or throw an exception depending on the configured error level
+     * Log the detected N+1 queries error message or throw an exception depending on the configured error level
      *
-     * @param errorMessage Error message for the N+1 query detected
+     * @param errorMessage Error message for the N+1 queries detected
      */
     private void logDetectedNPlusOneQueries(String errorMessage) {
         switch (hibernateQueryInterceptorProperties.getErrorLevel()) {
@@ -139,7 +139,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
                 LOGGER.error(errorMessage);
                 break;
             default:
-                throw new NPlusOneQueryException(errorMessage, new Exception(new Throwable()));
+                throw new NPlusOneQueriesException(errorMessage, new Exception(new Throwable()));
         }
     }
 }

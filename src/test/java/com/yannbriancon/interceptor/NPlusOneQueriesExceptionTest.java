@@ -1,6 +1,6 @@
 package com.yannbriancon.interceptor;
 
-import com.yannbriancon.exception.NPlusOneQueryException;
+import com.yannbriancon.exception.NPlusOneQueriesException;
 import com.yannbriancon.utils.entity.Message;
 import com.yannbriancon.utils.repository.MessageRepository;
 import org.junit.jupiter.api.Test;
@@ -18,39 +18,39 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RunWith(SpringRunner.class)
 @SpringBootTest("hibernate.query.interceptor.error-level=EXCEPTION")
 @Transactional
-class NPlusOneQueryExceptionTest {
+class NPlusOneQueriesExceptionTest {
 
     @Autowired
     private MessageRepository messageRepository;
 
     @Test
-    void nPlusOneQueryDetection_throwCallbackExceptionWhenNPlusOneQuery() {
+    void nPlusOneQueriesDetection_throwCallbackExceptionWhenNPlusOneQueries() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
 
         try {
-            // Trigger N+1 query
+            // Trigger N+1 queries
             List<String> names = messages.stream()
                     .map(message -> message.getAuthor().getName())
                     .collect(Collectors.toList());
             assert false;
-        } catch (NPlusOneQueryException exception) {
+        } catch (NPlusOneQueriesException exception) {
             assertThat(exception.getMessage())
-                    .isEqualTo("N+1 query detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
-                            "    at com.yannbriancon.interceptor.NPlusOneQueryExceptionTest" +
-                            ".lambda$nPlusOneQueryDetection_throwCallbackExceptionWhenNPlusOneQuery$0" +
-                            "(NPlusOneQueryExceptionTest.java:34)\n" +
+                    .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                            "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest" +
+                            ".lambda$nPlusOneQueriesDetection_throwCallbackExceptionWhenNPlusOneQueries$0" +
+                            "(NPlusOneQueriesExceptionTest.java:34)\n" +
                             "    Hint: Missing Eager fetching configuration on the query " +
                             "that fetches the object of type com.yannbriancon.utils.entity.User\n");
         }
     }
 
     @Test
-    void nPlusOneQueryDetection_isNotThrowingExceptionWhenNoNPlusOneQuery() {
+    void nPlusOneQueriesDetection_isNotThrowingExceptionWhenNoNPlusOneQueries() {
         // Fetch the 2 messages with the authors
         List<Message> messages = messageRepository.getAllBy();
 
-        // Do not trigger N+1 query
+        // Do not trigger N+1 queries
         List<String> names = messages.stream()
                 .map(message -> message.getAuthor().getName())
                 .collect(Collectors.toList());

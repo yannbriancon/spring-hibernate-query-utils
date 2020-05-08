@@ -41,7 +41,7 @@
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
 * [Usage](#usage)
-  * [N+1 Query Detection](#n1-query-detection)
+  * [N+1 Queries Detection](#n1-queries-detection)
     * [Detection](#detection)
     * [Configuration](#configuration)
   * [Query Count](#query-count)
@@ -84,7 +84,7 @@ Add the dependency to your project inside your `pom.xml` file
 <dependency>
     <groupId>com.yannbriancon</groupId>
     <artifactId>spring-hibernate-query-utils</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
@@ -92,13 +92,13 @@ Add the dependency to your project inside your `pom.xml` file
 <!-- USAGE -->
 ## Usage
 
-### N+1 Query Detection
+### N+1 Queries Detection
 
 #### Detection
 
-The N+1 query detection is enabled by default so no configuration is needed.
+The N+1 queries detection is enabled by default so no configuration is needed.
 
-Each time a N+1 query is detected in a transaction, a log of level error will be sent.
+Each time N+1 queries are detected in a transaction, a log of level error will be sent.
 
 Here is an example catching the error log:
 
@@ -106,7 +106,7 @@ Here is an example catching the error log:
 @RunWith(MockitoJUnitRunner.class)
 @SpringBootTest
 @Transactional
-class NPlusOneQueryLoggingTest {
+class NPlusOneQueriesLoggingTest {
 
     @Autowired
     private MessageRepository messageRepository;
@@ -124,20 +124,23 @@ class NPlusOneQueryLoggingTest {
     }
 
     @Test
-    void nPlusOneQueryDetection_isLoggingWhenDetectingNPlusOneQuery() {
+    void nPlusOneQueriesDetection_isLoggingWhenNPlusOneQueries() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
-    
-        // Trigger N+1 query
+
+        // Trigger N+1 queries
         List<String> names = messages.stream()
                 .map(message -> message.getAuthor().getName())
                 .collect(Collectors.toList());
-    
+
         verify(mockedAppender, times(2)).doAppend(loggingEventCaptor.capture());
-    
+
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
-        assertThat("N+1 query detected for entity: com.yannbriancon.utils.entity.User")
-                .isEqualTo(loggingEvent.getMessage());
+        assertThat(loggingEvent.getMessage())
+                .isEqualTo("N+1 queries detected for entity com.yannbriancon.utils.entity.User " +
+                "at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
+                "lambda$nPlusOneQueriesDetection_isLoggingWhenNPlusOneQueries$0" +
+                "(NPlusOneQueriesLoggingTest.java:56)");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 }
@@ -145,21 +148,21 @@ class NPlusOneQueryLoggingTest {
 
 #### Configuration
 
-By default the detection of a N+1 query logs an error to avoid breaking your code. 
+By default the detection of N+1 queries logs an error to avoid breaking your code. 
 
 However, my advise is to override the default error level to throw exceptions for your test profile. 
 
 Now you will easily detect which tests are failing and be able to flag them and set the error level to error logs only on 
 those tests while you are fixing them.
 
-To do this, you can configure the error level when a N+1 query is detected using the property `hibernate.query.interceptor.error-level`. 
+To do this, you can configure the error level when N+1 queries is detected using the property `hibernate.query.interceptor.error-level`. 
 
 4 levels are available to handle the detection of N+1 queries:
 
 * **INFO**: Log a message of level info
 * **WARN**: Log a message of level warn
 * **ERROR** (default): Log a message of level error
-* **EXCEPTION**: Throw a NPlusOneQueryException
+* **EXCEPTION**: Throw a NPlusOneQueriesException
 
 Here are two examples on how to use it globally or for a specific test:
 
@@ -172,7 +175,7 @@ hibernate.query.interceptor.error-level=INFO
 ```java
 @SpringBootTest("hibernate.query.interceptor.error-level=INFO")
 @Transactional
-class NPlusOneQueryLoggingTest {
+class NPlusOneQueriesLoggingTest {
     ...
 }
 ```

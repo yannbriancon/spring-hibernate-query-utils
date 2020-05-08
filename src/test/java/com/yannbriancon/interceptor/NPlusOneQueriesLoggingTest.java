@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verify;
 @RunWith(MockitoJUnitRunner.class)
 @SpringBootTest
 @Transactional
-class NPlusOneQueryLoggingTest {
+class NPlusOneQueriesLoggingTest {
 
     @Autowired
     private MessageRepository messageRepository;
