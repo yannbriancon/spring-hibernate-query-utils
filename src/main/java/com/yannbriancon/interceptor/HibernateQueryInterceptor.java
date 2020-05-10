@@ -83,43 +83,68 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public Object getEntity(String entityName, Serializable id) {
+        detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
+
         Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
 
         if (previouslyLoadedEntities.contains(entityName + id)) {
             previouslyLoadedEntities.remove(entityName + id);
             threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
-            Optional<String> errorMessage = detectNPlusOneQueries(entityName);
-            errorMessage.ifPresent(this::logDetectedNPlusOneQueries);
+        } else {
+            previouslyLoadedEntities.add(entityName + id);
+            threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
         }
-
-        previouslyLoadedEntities.add(entityName + id);
-        threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
 
         return null;
     }
 
     /**
-     * Detect the N+1 queries by checking if the stack trace contains an Hibernate Proxy on the Entity
+     * Detect the N+1 queries caused by a missing eager fetching configuration on a query with a lazy loaded field
+     * <p>
+     * <p>
+     * Detection checks:
+     * - The getEntity was called twice for the couple (entity, id)
+     * <p>
+     * - There is an occurrence of hibernate proxy followed by entity class in the stackTraceElements
+     * Avoid detecting calls to queries like findById and queries with eager fetching on some entity fields
      *
      * @param entityName Name of the entity
-     * @return If N+1 queries detected, return error message corresponding to the N+1 queries
+     * @param id         Id of the entity objecy
+     * @return Boolean telling whether N+1 queries were detected or not
      */
-    private Optional<String> detectNPlusOneQueries(String entityName) {
+    private boolean detectNPlusOneQueriesOfMissingQueryEagerFetching(String entityName, Serializable id) {
+        Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
+
+        if (!previouslyLoadedEntities.contains(entityName + id)) {
+            return false;
+        }
+
+        // Detect N+1 queries by searching for newest occurrence of Hibernate proxy followed by entity class in stack
+        // elements
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+        StackTraceElement originStackTraceElement = null;
 
-        for (int i = 0; i + 1 < stackTraceElements.length; i++) {
-            StackTraceElement stackTraceElement = stackTraceElements[i];
-
-            if (stackTraceElement.getClassName().indexOf(entityName) == 0) {
-                String errorMessage = "N+1 queries detected on a getter of the entity " + entityName +
-                        "\n    at " + stackTraceElements[i + 1].toString() +
-                        "\n    Hint: Missing Eager fetching configuration on the query that fetches the object of " +
-                        "type " + entityName + "\n";
-                return Optional.of(errorMessage);
+        for (int i = 0; i < stackTraceElements.length - 3; i++) {
+            if (
+                    stackTraceElements[i].getClassName().indexOf(HIBERNATE_PROXY_PREFIX) == 0
+                            && stackTraceElements[i + 1].getClassName().indexOf(entityName) == 0
+            ) {
+                originStackTraceElement = stackTraceElements[i + 2];
+                break;
             }
         }
 
-        return Optional.empty();
+        if (originStackTraceElement == null) {
+            return false;
+        }
+
+        String errorMessage = "N+1 queries detected on a getter of the entity " + entityName +
+                "\n    at " + originStackTraceElement.toString() +
+                "\n    Hint: Missing Eager fetching configuration on the query that fetched the object of " +
+                "type " + entityName + "\n";
+        logDetectedNPlusOneQueries(errorMessage);
+
+        return true;
     }
 
     /**
