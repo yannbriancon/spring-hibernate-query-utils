@@ -147,6 +147,26 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         return true;
     }
 
+
+    /**
+     * Get the Proxy method name that was called first to know which query triggered the interceptor
+     *
+     * @return Optional of method name if found
+     */
+    private Optional<String> getProxyMethodName() {
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+        for (int i = stackTraceElements.length - 1; i >= 0; i--) {
+            StackTraceElement stackTraceElement = stackTraceElements[i];
+
+            if (stackTraceElement.getClassName().indexOf("com.sun.proxy") == 0) {
+                return Optional.of(stackTraceElement.getClassName() + stackTraceElement.getMethodName());
+            }
+        }
+
+        return Optional.empty();
+    }
+
     /**
      * Log the detected N+1 queries error message or throw an exception depending on the configured error level
      *
