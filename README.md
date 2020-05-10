@@ -25,9 +25,9 @@
     Spring Hibernate Query Utils: an easy way of detecting N+1 queries and counting queries in a Spring/Hibernate application 
     <br />
     <br />
-    <a href="https://github.com/yannbriancon/spring-hibernate-query-count/issues">Report Bug</a>
+    <a href="https://github.com/yannbriancon/spring-hibernate-query-utils/issues">Report Bug</a>
     ·
-    <a href="https://github.com/yannbriancon/spring-hibernate-query-count/issues">Request Feature</a>
+    <a href="https://github.com/yannbriancon/spring-hibernate-query-utils/issues">Request Feature</a>
   </p>
 </p>
 
@@ -45,6 +45,7 @@
     * [Detection](#detection)
     * [Configuration](#configuration)
   * [Query Count](#query-count)
+* [Changelog](#changelog)
 * [License](#license)
 * [Contact](#contact)
 
@@ -86,7 +87,7 @@ Add the dependency to your project inside your `pom.xml` file
 <dependency>
     <groupId>com.yannbriancon</groupId>
     <artifactId>spring-hibernate-query-utils</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 </dependency>
 ```
 
@@ -102,7 +103,13 @@ The N+1 queries detection is enabled by default so no configuration is needed.
 
 Each time N+1 queries are detected in a transaction, a log of level error will be sent.
 
-Here is an example catching the N+1 queries detection error log:
+Two types of N+1 queries are detected:
+
+- N+1 queries caused by a field needed but not eager fetched on a specific query
+
+- N+1 queries caused by an entity field not configured to be fetched lazily
+
+Here is an example catching the error log for the first type of N+1 queries:
 
 ```java
 @RunWith(MockitoJUnitRunner.class)
@@ -126,7 +133,7 @@ class NPlusOneQueriesLoggingTest {
     }
 
     @Test
-    void nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries() {
+    void hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
 
@@ -141,9 +148,9 @@ class NPlusOneQueriesLoggingTest {
         assertThat(loggingEvent.getMessage())
                 .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
-                        "lambda$nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries$0" +
-                        "(NPlusOneQueriesLoggingTest.java:56)\n" +
-                        "    Hint: Missing Eager fetching configuration on the query that fetches the object of type" +
+                        "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0" +
+                        "(NPlusOneQueriesLoggingTest.java:61)\n" +
+                        "    Hint: Missing Eager fetching configuration on the query that fetched the object of type" +
                         " com.yannbriancon.utils.entity.User\n");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
@@ -225,6 +232,10 @@ public class NotificationResourceIntTest {
 }
 ```
 
+<!-- CHANGELOG -->
+## Changelog
+
+See [`CHANGELOG`][changelog-url] for more information.
 
 
 <!-- LICENSE -->
@@ -239,18 +250,19 @@ Distributed under the MIT License. See [`LICENSE`][license-url] for more informa
 
 [@YBriancon](https://twitter.com/YBriancon) - yann.briancon.73@gmail.com
 
-Project Link: [https://github.com/yannbriancon/spring-hibernate-query-count](https://github.com/yannbriancon/spring-hibernate-query-count)
+Project Link: [https://github.com/yannbriancon/spring-hibernate-query-utils](https://github.com/yannbriancon/spring-hibernate-query-utils)
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
-[contributors-url]: https://github.com/yannbriancon/spring-hibernate-query-count/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
-[forks-url]: https://github.com/yannbriancon/spring-hibernate-query-count/network/members
-[stars-shield]: https://img.shields.io/github/stars/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
-[stars-url]: https://github.com/yannbriancon/spring-hibernate-query-count/stargazers
-[issues-shield]: https://img.shields.io/github/issues/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
-[issues-url]: https://github.com/yannbriancon/spring-hibernate-query-count/issues
-[license-shield]: https://img.shields.io/github/license/yannbriancon/spring-hibernate-query-count.svg?style=flat-square
-[license-url]: https://github.com/yannbriancon/spring-hibernate-query-count/blob/master/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
+[contributors-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
+[forks-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/network/members
+[stars-shield]: https://img.shields.io/github/stars/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
+[stars-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/stargazers
+[issues-shield]: https://img.shields.io/github/issues/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
+[issues-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/issues
+[license-shield]: https://img.shields.io/github/license/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
+[license-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/LICENSE
+[changelog-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CHANGELOG

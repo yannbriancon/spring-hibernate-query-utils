@@ -41,7 +41,7 @@ class NPlusOneQueriesExceptionTest {
                             ".lambda$nPlusOneQueriesDetection_throwCallbackExceptionWhenNPlusOneQueries$0" +
                             "(NPlusOneQueriesExceptionTest.java:34)\n" +
                             "    Hint: Missing Eager fetching configuration on the query " +
-                            "that fetches the object of type com.yannbriancon.utils.entity.User\n");
+                            "that fetched the object of type com.yannbriancon.utils.entity.User\n");
         }
     }
 
