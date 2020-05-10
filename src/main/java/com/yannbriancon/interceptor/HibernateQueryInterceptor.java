@@ -10,7 +10,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -24,9 +26,15 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
             ThreadLocal.withInitial(new EmptySetSupplier());
 
+    private transient ThreadLocal<Map<String, String>> threadProxyMethodEntityMapping =
+            ThreadLocal.withInitial(new EmptyMapSupplier());
+
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
     private final HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties;
+
+    private final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
+    private final String PROXY_METHOD_PREFIX = "com.sun.proxy";
 
     public HibernateQueryInterceptor(HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties) {
         this.hibernateQueryInterceptorProperties = hibernateQueryInterceptorProperties;
@@ -70,6 +78,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public void afterTransactionCompletion(Transaction tx) {
         threadPreviouslyLoadedEntities.set(new HashSet<>());
+        threadProxyMethodEntityMapping.set(new HashMap<>());
     }
 
     /**
@@ -84,6 +93,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public Object getEntity(String entityName, Serializable id) {
         detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
+
+        detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(entityName, id);
 
         Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
 
@@ -147,6 +158,59 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         return true;
     }
 
+    /**
+     * Detect the N+1 queries caused by a missing lazy fetching configuration on an entity field
+     * <p>
+     * Detection checks:
+     * - The getEntity was called twice for the couple (entity, id)
+     * <p>
+     * - The query that triggered the fetching of the entity object was first called for a different entity
+     * Avoid detecting calls to queries like findById
+     *
+     * @param entityName Name of the entity
+     * @param id         Id of the entity objecy
+     * @return Boolean telling whether N+1 queries were detected or not
+     */
+    private boolean detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(String entityName, Serializable id) {
+        Optional<String> optionalProxyMethodName = getProxyMethodName();
+        if (!optionalProxyMethodName.isPresent()) {
+            return false;
+        }
+        String proxyMethodName = optionalProxyMethodName.get();
+
+        Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
+        Map<String, String> proxyMethodEntityMapping = threadProxyMethodEntityMapping.get();
+
+        boolean nPlusOneQueriesDetected = false;
+        if (
+                previouslyLoadedEntities.contains(entityName + id)
+                        && proxyMethodEntityMapping.containsKey(proxyMethodName)
+                        && !proxyMethodEntityMapping.get(proxyMethodName).equals(entityName)
+        ) {
+            nPlusOneQueriesDetected = true;
+
+            String errorMessage = "N+1 queries detected on a query for the entity " + entityName;
+
+            // Find origin of the N+1 queries in client package
+            // by getting oldest occurrence of proxy method in stack elements
+            StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+            for (int i = stackTraceElements.length - 1; i >= 1; i--) {
+                if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
+                    errorMessage += "\n    at " + stackTraceElements[i].toString();
+                    break;
+                }
+            }
+
+            errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of one of the entities " +
+                    "fetched in the query\n";
+
+            logDetectedNPlusOneQueries(errorMessage);
+        }
+
+        proxyMethodEntityMapping.putIfAbsent(proxyMethodName, entityName);
+        return nPlusOneQueriesDetected;
+    }
 
     /**
      * Get the Proxy method name that was called first to know which query triggered the interceptor
@@ -192,5 +256,11 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 class EmptySetSupplier implements Supplier<Set<String>> {
     public Set<String> get() {
         return new HashSet<>();
+    }
+}
+
+class EmptyMapSupplier implements Supplier<Map<String, String>> {
+    public Map<String, String> get() {
+        return new HashMap<>();
     }
 }
