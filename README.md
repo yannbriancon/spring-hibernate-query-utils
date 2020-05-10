@@ -126,7 +126,7 @@ class NPlusOneQueriesLoggingTest {
     }
 
     @Test
-    void nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries() {
+    void hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
 
@@ -141,9 +141,9 @@ class NPlusOneQueriesLoggingTest {
         assertThat(loggingEvent.getMessage())
                 .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
-                        "lambda$nPlusOneQueriesDetection_isLoggingWhenDetectingNPlusOneQueries$0" +
-                        "(NPlusOneQueriesLoggingTest.java:56)\n" +
-                        "    Hint: Missing Eager fetching configuration on the query that fetches the object of type" +
+                        "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0" +
+                        "(NPlusOneQueriesLoggingTest.java:61)\n" +
+                        "    Hint: Missing Eager fetching configuration on the query that fetched the object of type" +
                         " com.yannbriancon.utils.entity.User\n");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
