@@ -86,7 +86,7 @@ Add the dependency to your project inside your `pom.xml` file
 <dependency>
     <groupId>com.yannbriancon</groupId>
     <artifactId>spring-hibernate-query-utils</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 </dependency>
 ```
 
