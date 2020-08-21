@@ -92,9 +92,10 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public Object getEntity(String entityName, Serializable id) {
-        detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
-
-        detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(entityName, id);
+        if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
+            detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
+            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(entityName, id);
+        }
 
         Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
 

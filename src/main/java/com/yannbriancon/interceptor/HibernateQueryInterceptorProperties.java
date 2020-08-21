@@ -18,11 +18,21 @@ public class HibernateQueryInterceptorProperties implements Serializable {
      */
     private ErrorLevel errorLevel = ErrorLevel.ERROR;
 
+    private boolean nPlusOneDetectionEnabled = true;
+
     public ErrorLevel getErrorLevel() {
         return errorLevel;
     }
 
     public void setErrorLevel(String errorLevel) {
         this.errorLevel = ErrorLevel.valueOf(errorLevel);
+    }
+
+    public boolean isnPlusOneDetectionEnabled() {
+        return nPlusOneDetectionEnabled;
+    }
+
+    public void setnPlusOneDetectionEnabled(boolean nPlusOneDetectionEnabled) {
+        this.nPlusOneDetectionEnabled = nPlusOneDetectionEnabled;
     }
 }
