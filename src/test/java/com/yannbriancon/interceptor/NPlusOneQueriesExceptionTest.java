@@ -33,7 +33,7 @@ class NPlusOneQueriesExceptionTest {
     private HibernateQueryInterceptor hibernateQueryInterceptor;
 
     @Test
-    void nPlusOneQueriesDetection_throwCallbackExceptionWhenNPlusOneQueries() {
+    void nPlusOneQueriesDetection_throwsCallbackExceptionWhenNPlusOneQueries() {
         // Fetch the 2 messages without the authors
         List<Message> messages = messageRepository.findAll();
 
@@ -45,12 +45,9 @@ class NPlusOneQueriesExceptionTest {
             assert false;
         } catch (NPlusOneQueriesException exception) {
             assertThat(exception.getMessage())
-                    .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
-                            "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest" +
-                            ".lambda$nPlusOneQueriesDetection_throwCallbackExceptionWhenNPlusOneQueries$0" +
-                            "(NPlusOneQueriesExceptionTest.java:34)\n" +
-                            "    Hint: Missing Eager fetching configuration on the query " +
-                            "that fetched the object of type com.yannbriancon.utils.entity.User\n");
+                    .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                            "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest." +
+                            "lambda$nPlusOneQueriesDetection_throwsCallbackExceptionWhenNPlusOneQueries$0");
         }
     }
 

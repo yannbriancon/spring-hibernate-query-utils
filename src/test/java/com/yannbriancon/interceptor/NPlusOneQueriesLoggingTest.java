@@ -65,12 +65,9 @@ class NPlusOneQueriesLoggingTest {
 
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
         assertThat(loggingEvent.getMessage())
-                .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
-                        "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0" +
-                        "(NPlusOneQueriesLoggingTest.java:61)\n" +
-                        "    Hint: Missing Eager fetching configuration on the query that fetched the object of type" +
-                        " com.yannbriancon.utils.entity.User\n");
+                        "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 
@@ -83,12 +80,9 @@ class NPlusOneQueriesLoggingTest {
 
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
         assertThat(loggingEvent.getMessage())
-                .isEqualTo("N+1 queries detected on a query for the entity com.yannbriancon.utils.entity.Message\n" +
+                .contains("N+1 queries detected on a query for the entity com.yannbriancon.utils.entity.Message\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
-                        "hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingLazyFetchingOnEntityField" +
-                        "(NPlusOneQueriesLoggingTest.java:80)\n" +
-                        "    Hint: Missing Lazy fetching configuration on a field of one of the entities fetched in " +
-                        "the query\n");
+                        "hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingLazyFetchingOnEntityField");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 
