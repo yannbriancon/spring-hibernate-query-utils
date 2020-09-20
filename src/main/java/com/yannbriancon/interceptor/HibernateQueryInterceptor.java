@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import javax.persistence.EntityManager;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,7 +37,9 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
     private final String PROXY_METHOD_PREFIX = "com.sun.proxy";
 
-    public HibernateQueryInterceptor(HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties) {
+    public HibernateQueryInterceptor(
+            HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties
+    ) {
         this.hibernateQueryInterceptorProperties = hibernateQueryInterceptorProperties;
     }
 
@@ -46,6 +49,18 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private void resetNPlusOneQueryDetectionState() {
         threadPreviouslyLoadedEntities.set(new HashSet<>());
         threadProxyMethodEntityMapping.set(new HashMap<>());
+    }
+
+    /**
+     * Clear the Hibernate Session and reset the N+1 query detection state
+     * <p>
+     * Clearing the Hibernate Session is necessary to detect N+1 queries in tests as they would be in production.
+     * Otherwise, every objects created in the setup of the tests would already be loaded in the Session and would
+     * hide potential N+1 queries.
+     */
+    public void clearNPlusOneQuerySession(EntityManager entityManager) {
+        entityManager.clear();
+        this.resetNPlusOneQueryDetectionState();
     }
 
     /**
