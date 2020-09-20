@@ -246,7 +246,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         for (int i = stackTraceElements.length - 1; i >= 0; i--) {
             StackTraceElement stackTraceElement = stackTraceElements[i];
 
-            if (stackTraceElement.getClassName().indexOf("com.sun.proxy") == 0) {
+            if (stackTraceElement.getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
                 return Optional.of(stackTraceElement.getClassName() + stackTraceElement.getMethodName());
             }
         }
