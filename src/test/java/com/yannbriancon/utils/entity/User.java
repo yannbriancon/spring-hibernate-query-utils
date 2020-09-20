@@ -21,6 +21,10 @@ public class User {
     public User() {
     }
 
+    public User(String name) {
+        this.name = name;
+    }
+
     public Long getId() {
         return id;
     }
