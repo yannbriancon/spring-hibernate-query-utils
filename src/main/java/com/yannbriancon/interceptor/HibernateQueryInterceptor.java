@@ -26,15 +26,15 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
             ThreadLocal.withInitial(new EmptySetSupplier());
 
-    private transient ThreadLocal<Map<String, String>> threadProxyMethodSqlQueryMapping =
-            ThreadLocal.withInitial(new EmptyMapSupplier());
+    private transient ThreadLocal<Set<String>> threadPrevioulyQueriedProxyMethods =
+            ThreadLocal.withInitial(new EmptySetSupplier());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
     private final HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties;
 
-    private final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
-    private final String PROXY_METHOD_PREFIX = "com.sun.proxy";
+    private static final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
+    private static final String PROXY_METHOD_PREFIX = "com.sun.proxy";
 
     public HibernateQueryInterceptor(
             HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties
@@ -47,7 +47,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     private void resetNPlusOneQueryDetectionState() {
         threadPreviouslyLoadedEntities.set(new HashSet<>());
-        threadProxyMethodSqlQueryMapping.set(new HashMap<>());
+        threadPrevioulyQueriedProxyMethods.set(new HashSet<>());
     }
 
     /**
@@ -86,7 +86,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public String onPrepareStatement(String sql) {
         if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
-            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(sql);
+            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching();
         }
         Long count = threadQueryCount.get();
         if (count != null) {
@@ -174,46 +174,39 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     /**
      * Detect the N+1 queries caused by a missing lazy fetching configuration on an entity field
      * <p>
-     * Detection checks that several prepared statements were generated from the same proxy method
-     *
-     * @param sql Query that was triggered
+     * Detection checks that several queries were generated from the same proxy method
      */
-    private void detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(String sql) {
+    private void detectNPlusOneQueriesOfMissingEntityFieldLazyFetching() {
         Optional<String> optionalProxyMethodName = getProxyMethodName();
         if (!optionalProxyMethodName.isPresent()) {
             return;
         }
         String proxyMethodName = optionalProxyMethodName.get();
 
-        Map<String, String> proxyMethodSqlQueryMapping = threadProxyMethodSqlQueryMapping.get();
+        Set<String> previouslyQueriedProxyMethods = threadPrevioulyQueriedProxyMethods.get();
 
-        if (!proxyMethodSqlQueryMapping.containsKey(proxyMethodName)) {
-            proxyMethodSqlQueryMapping.put(proxyMethodName, sql);
+        if (!previouslyQueriedProxyMethods.contains(proxyMethodName)) {
+            previouslyQueriedProxyMethods.add(proxyMethodName);
             return;
         }
 
-        if (proxyMethodSqlQueryMapping.get(proxyMethodName).equals(sql))
-        ){
-            String errorMessage = "N+1 queries detected with eager fetchin on the query";
+        String errorMessage = "N+1 queries detected with eager fetching on the query";
 
-            // Find origin of the N+1 queries in client package
-            // by getting oldest occurrence of proxy method in stack elements
-            StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+        // Find origin of the N+1 queries in client package
+        // by getting oldest occurrence of proxy method in stack elements
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
 
-            for (int i = stackTraceElements.length - 1; i >= 1; i--) {
-                if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
-                    errorMessage += "\n    at " + stackTraceElements[i].toString();
-                    break;
-                }
+        for (int i = stackTraceElements.length - 1; i >= 1; i--) {
+            if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
+                errorMessage += "\n    at " + stackTraceElements[i].toString();
+                break;
             }
-
-            errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of one of the entities " +
-                    "fetched in the query\n";
-
-            logDetectedNPlusOneQueries(errorMessage);
         }
 
-        proxyMethodSqlQueryMapping.putIfAbsent(proxyMethodName, sql);
+        errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of one of the entities " +
+                "fetched in the query\n";
+
+        logDetectedNPlusOneQueries(errorMessage);
     }
 
     /**
