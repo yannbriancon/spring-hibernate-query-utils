@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 
 import javax.persistence.EntityManager;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -253,11 +251,5 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 class EmptySetSupplier implements Supplier<Set<String>> {
     public Set<String> get() {
         return new HashSet<>();
-    }
-}
-
-class EmptyMapSupplier implements Supplier<Map<String, String>> {
-    public Map<String, String> get() {
-        return new HashMap<>();
     }
 }
