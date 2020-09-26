@@ -77,9 +77,9 @@ class NPlusOneQueriesExceptionTest {
             assert false;
         } catch (NPlusOneQueriesException exception) {
             assertThat(exception.getMessage())
-                    .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                    .contains("N+1 queries detected with eager fetching on the query\n" +
                             "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest" +
-                            ".getMessageAuthorNameWithNPlusOneQuery");
+                            ".hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnManyToOne");
         }
     }
 

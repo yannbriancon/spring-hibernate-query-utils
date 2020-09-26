@@ -80,7 +80,7 @@ class NPlusOneQueriesLoggingTest {
 
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
         assertThat(loggingEvent.getMessage())
-                .contains("N+1 queries detected with at least two prepared statements generated from the same query\n" +
+                .contains("N+1 queries detected with eager fetching on the query\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
                         "hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingLazyFetchingOnEntityField");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
