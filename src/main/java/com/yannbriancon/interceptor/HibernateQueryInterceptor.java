@@ -3,7 +3,6 @@ package com.yannbriancon.interceptor;
 import com.yannbriancon.exception.NPlusOneQueriesException;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.Transaction;
-import org.hibernate.proxy.HibernateProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -27,7 +26,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
             ThreadLocal.withInitial(new EmptySetSupplier());
 
-    private transient ThreadLocal<Map<String, String>> threadProxyMethodEntityMapping =
+    private transient ThreadLocal<Map<String, String>> threadProxyMethodSqlQueryMapping =
             ThreadLocal.withInitial(new EmptyMapSupplier());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
@@ -48,7 +47,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     private void resetNPlusOneQueryDetectionState() {
         threadPreviouslyLoadedEntities.set(new HashSet<>());
-        threadProxyMethodEntityMapping.set(new HashMap<>());
+        threadProxyMethodSqlQueryMapping.set(new HashMap<>());
     }
 
     /**
@@ -78,7 +77,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Increment the query count for the considered thread for each new statement if the count has been initialized
+     * Detect the N+1 queries.
+     * Increment the query count for the considered thread for each new statement if the count has been initialized.
      *
      * @param sql Query to be executed
      * @return Query to be executed
@@ -86,6 +86,9 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public String onPrepareStatement(String sql) {
         Long count = threadQueryCount.get();
+        if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
+            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(sql);
+        }
         if (count != null) {
             threadQueryCount.set(count + 1);
         }
@@ -104,10 +107,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Detect the N+1 queries by checking if two calls were made to getEntity for the same instance
-     * <p>
-     * The first call is made with the instance filled with a {@link HibernateProxy}
-     * and the second is made after a query was executed to fetch the data in the Entity
+     * Hook used to detect the N+1 queries.
      *
      * @param entityName Name of the entity to get
      * @param id         Id of the entity to get
@@ -116,7 +116,6 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     public Object getEntity(String entityName, Serializable id) {
         if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
             detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
-            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(entityName, id);
         }
 
         Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
@@ -184,35 +183,28 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     /**
      * Detect the N+1 queries caused by a missing lazy fetching configuration on an entity field
      * <p>
-     * Detection checks:
-     * - The getEntity was called twice for the couple (entity, id)
-     * <p>
-     * - The query that triggered the fetching of the entity object was first called for a different entity
-     * Avoid detecting calls to queries like findById
+     * Detection checks that several prepared statements were generated from the same proxy method
      *
-     * @param entityName Name of the entity
-     * @param id         Id of the entity objecy
+     * @param sql Query that was triggered
      * @return Boolean telling whether N+1 queries were detected or not
      */
-    private boolean detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(String entityName, Serializable id) {
+    private boolean detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(String sql) {
         Optional<String> optionalProxyMethodName = getProxyMethodName();
         if (!optionalProxyMethodName.isPresent()) {
             return false;
         }
         String proxyMethodName = optionalProxyMethodName.get();
 
-        Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
-        Map<String, String> proxyMethodEntityMapping = threadProxyMethodEntityMapping.get();
+        Map<String, String> proxyMethodSqlQueryMapping = threadProxyMethodSqlQueryMapping.get();
 
         boolean nPlusOneQueriesDetected = false;
         if (
-                previouslyLoadedEntities.contains(entityName + id)
-                        && proxyMethodEntityMapping.containsKey(proxyMethodName)
-                        && !proxyMethodEntityMapping.get(proxyMethodName).equals(entityName)
+                proxyMethodSqlQueryMapping.containsKey(proxyMethodName)
+                        && !proxyMethodSqlQueryMapping.get(proxyMethodName).equals(sql)
         ) {
             nPlusOneQueriesDetected = true;
 
-            String errorMessage = "N+1 queries detected on a query for the entity " + entityName;
+            String errorMessage = "N+1 queries detected with eager fetchin on the query";
 
             // Find origin of the N+1 queries in client package
             // by getting oldest occurrence of proxy method in stack elements
@@ -231,7 +223,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
             logDetectedNPlusOneQueries(errorMessage);
         }
 
-        proxyMethodEntityMapping.putIfAbsent(proxyMethodName, entityName);
+        proxyMethodSqlQueryMapping.putIfAbsent(proxyMethodName, sql);
         return nPlusOneQueriesDetected;
     }
 
