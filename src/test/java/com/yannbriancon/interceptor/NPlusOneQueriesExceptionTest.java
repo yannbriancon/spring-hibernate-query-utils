@@ -1,8 +1,10 @@
 package com.yannbriancon.interceptor;
 
 import com.yannbriancon.exception.NPlusOneQueriesException;
+import com.yannbriancon.utils.entity.Avatar;
 import com.yannbriancon.utils.entity.Message;
 import com.yannbriancon.utils.entity.User;
+import com.yannbriancon.utils.repository.AvatarRepository;
 import com.yannbriancon.utils.repository.MessageRepository;
 import com.yannbriancon.utils.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class NPlusOneQueriesExceptionTest {
 
+    @Autowired
+    private AvatarRepository avatarRepository;
     @Autowired
     private EntityManager entityManager;
     @Autowired
@@ -60,6 +64,23 @@ class NPlusOneQueriesExceptionTest {
         List<String> names = messages.stream()
                 .map(message -> message.getAuthor().getName())
                 .collect(Collectors.toList());
+    }
+
+
+    @Test
+    void hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnManyToOne() {
+
+        try {
+            // Test a method that should return a N+1 query
+            // The query triggers N+1 queries to eager fetch the user field
+            List<Avatar> avatars = avatarRepository.findAll();
+            assert false;
+        } catch (NPlusOneQueriesException exception) {
+            assertThat(exception.getMessage())
+                    .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                            "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest" +
+                            ".getMessageAuthorNameWithNPlusOneQuery");
+        }
     }
 
     @Test

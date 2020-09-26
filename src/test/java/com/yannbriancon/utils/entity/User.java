@@ -6,10 +6,11 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,6 +18,9 @@ public class User {
 
     @Column(name = "name")
     private String name;
+
+    @Column(name = "pseudo", unique = true)
+    private String pseudo;
 
     public User() {
     }
