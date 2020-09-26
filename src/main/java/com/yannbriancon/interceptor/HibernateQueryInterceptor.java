@@ -245,7 +245,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
                 LOGGER.error(errorMessage);
                 break;
             default:
-                throw new NPlusOneQueriesException(errorMessage, new Exception(new Throwable()));
+                throw new NPlusOneQueriesException(errorMessage);
         }
     }
 }
