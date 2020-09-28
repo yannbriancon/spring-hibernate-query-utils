@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 
 import javax.persistence.EntityManager;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -22,10 +24,10 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private transient ThreadLocal<Long> threadQueryCount = new ThreadLocal<>();
 
     private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
-            ThreadLocal.withInitial(new EmptySetSupplier());
+            ThreadLocal.withInitial(new EmptySetSupplier<>());
 
-    private transient ThreadLocal<Set<String>> threadPrevioulyQueriedProxyMethods =
-            ThreadLocal.withInitial(new EmptySetSupplier());
+    private transient ThreadLocal<Map<String, SelectQueriesInfo>> threadSelectQueriesInfoPerProxyMethod =
+            ThreadLocal.withInitial(new EmptyMapSupplier<>());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
@@ -45,7 +47,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     private void resetNPlusOneQueryDetectionState() {
         threadPreviouslyLoadedEntities.set(new HashSet<>());
-        threadPrevioulyQueriedProxyMethods.set(new HashSet<>());
+        threadSelectQueriesInfoPerProxyMethod.set(new HashMap<>());
     }
 
     /**
@@ -84,7 +86,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public String onPrepareStatement(String sql) {
         if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
-            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching();
+            updateSelectQueriesInfoPerProxyMethod(sql);
         }
         Long count = threadQueryCount.get();
         if (count != null) {
@@ -113,7 +115,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public Object getEntity(String entityName, Serializable id) {
         if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
-            detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
+            detectNPlusOneQueriesFromMissingEagerFetchingOnAQuery(entityName, id);
+            detectNPlusOneQueriesFromClassFieldEagerFetching(entityName);
         }
 
         return null;
@@ -122,17 +125,15 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     /**
      * Detect the N+1 queries caused by a missing eager fetching configuration on a query with a lazy loaded field
      * <p>
-     * <p>
      * Detection checks:
      * - The getEntity was called twice for the couple (entity, id)
-     * <p>
      * - There is an occurrence of hibernate proxy followed by entity class in the stackTraceElements
      * Avoid detecting calls to queries like findById and queries with eager fetching on some entity fields
      *
      * @param entityName Name of the entity
      * @param id         Id of the entity objecy
      */
-    private void detectNPlusOneQueriesOfMissingQueryEagerFetching(String entityName, Serializable id) {
+    private void detectNPlusOneQueriesFromMissingEagerFetchingOnAQuery(String entityName, Serializable id) {
         Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
 
         if (!previouslyLoadedEntities.contains(entityName + id)) {
@@ -170,25 +171,70 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Detect the N+1 queries caused by a missing lazy fetching configuration on an entity field
+     * Update the select queries info per proxy method to be able to detect potential N+1 queries
+     * due to Eager Fetching on a field of a class
      * <p>
-     * Detection checks that several queries were generated from the same proxy method
+     * Checks:
+     * - Detect queries that would not fit the N+1 queries problem, non select queries, and remove the entry
+     * - Detect multiple calls to same proxy method and reset the entry to avoid false positive
+     * - Detect select queries that could be potential N+1 queries and increment the count
      */
-    private void detectNPlusOneQueriesOfMissingEntityFieldLazyFetching() {
+    private void updateSelectQueriesInfoPerProxyMethod(String sql) {
         Optional<String> optionalProxyMethodName = getProxyMethodName();
         if (!optionalProxyMethodName.isPresent()) {
             return;
         }
         String proxyMethodName = optionalProxyMethodName.get();
 
-        Set<String> previouslyQueriedProxyMethods = threadPrevioulyQueriedProxyMethods.get();
+        boolean isSelectQuery = sql.toLowerCase().startsWith("select");
 
-        if (!previouslyQueriedProxyMethods.contains(proxyMethodName)) {
-            previouslyQueriedProxyMethods.add(proxyMethodName);
+        Map<String, SelectQueriesInfo> selectQueriesInfoPerProxyMethod = threadSelectQueriesInfoPerProxyMethod.get();
+
+        // The N+1 queries problem is only related to select queries
+        // So we remove the entry when detecting non select query for the proxy method
+        if (!isSelectQuery) {
+            selectQueriesInfoPerProxyMethod.remove(proxyMethodName);
+            threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
             return;
         }
 
-        String errorMessage = "N+1 queries detected with eager fetching on the query";
+        SelectQueriesInfo selectQueriesInfo = selectQueriesInfoPerProxyMethod.get(proxyMethodName);
+
+        // Handle several calls to the same proxy method by resetting the SelectQueriesInfo
+        // when the initial select query is detected
+        if (selectQueriesInfo == null || selectQueriesInfo.getInitialSelectQuery().equals(sql)) {
+            selectQueriesInfoPerProxyMethod.put(proxyMethodName, new SelectQueriesInfo(sql));
+            threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
+            return;
+        }
+
+        selectQueriesInfoPerProxyMethod.put(proxyMethodName, selectQueriesInfo.incrementSelectQueriesCount());
+        threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
+    }
+
+    /**
+     * Detect the N+1 queries caused by a missing lazy fetching configuration on an entity field
+     * <p>
+     * Detection checks that several select queries were generated from the same proxy method
+     */
+    private void detectNPlusOneQueriesFromClassFieldEagerFetching(String entityName) {
+        Optional<String> optionalProxyMethodName = getProxyMethodName();
+        if (!optionalProxyMethodName.isPresent()) {
+            return;
+        }
+        String proxyMethodName = optionalProxyMethodName.get();
+
+        Map<String, SelectQueriesInfo> selectQueriesInfoPerProxyMethod = threadSelectQueriesInfoPerProxyMethod.get();
+        SelectQueriesInfo selectQueriesInfo = selectQueriesInfoPerProxyMethod.get(proxyMethodName);
+        if (selectQueriesInfo == null || selectQueriesInfo.getSelectQueriesCount() < 2) {
+            return;
+        }
+
+        // Reset the count to 1 to log a message once per additional query
+        selectQueriesInfoPerProxyMethod.put(proxyMethodName, selectQueriesInfo.resetSelectQueriesCount());
+        threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
+
+        String errorMessage = "N+1 queries detected with eager fetching on the entity " + entityName;
 
         // Find origin of the N+1 queries in client package
         // by getting oldest occurrence of proxy method in stack elements
@@ -201,8 +247,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
             }
         }
 
-        errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of one of the entities " +
-                "fetched in the query\n";
+        errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of type " + entityName + " of " +
+                "one of the entities fetched in the query\n";
 
         logDetectedNPlusOneQueries(errorMessage);
     }
@@ -248,8 +294,14 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 }
 
-class EmptySetSupplier implements Supplier<Set<String>> {
-    public Set<String> get() {
+class EmptySetSupplier<T> implements Supplier<Set<T>> {
+    public Set<T> get() {
         return new HashSet<>();
+    }
+}
+
+class EmptyMapSupplier<T> implements Supplier<Map<String, T>> {
+    public Map<String, T> get() {
+        return new HashMap<>();
     }
 }
