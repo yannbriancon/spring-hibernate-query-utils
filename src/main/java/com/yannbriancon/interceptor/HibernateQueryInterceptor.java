@@ -3,12 +3,12 @@ package com.yannbriancon.interceptor;
 import com.yannbriancon.exception.NPlusOneQueriesException;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.Transaction;
-import org.hibernate.proxy.HibernateProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import javax.persistence.EntityManager;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,20 +24,42 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     private transient ThreadLocal<Long> threadQueryCount = new ThreadLocal<>();
 
     private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
-            ThreadLocal.withInitial(new EmptySetSupplier());
+            ThreadLocal.withInitial(new EmptySetSupplier<>());
 
-    private transient ThreadLocal<Map<String, String>> threadProxyMethodEntityMapping =
-            ThreadLocal.withInitial(new EmptyMapSupplier());
+    private transient ThreadLocal<Map<String, SelectQueriesInfo>> threadSelectQueriesInfoPerProxyMethod =
+            ThreadLocal.withInitial(new EmptyMapSupplier<>());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
     private final HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties;
 
-    private final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
-    private final String PROXY_METHOD_PREFIX = "com.sun.proxy";
+    private static final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
+    private static final String PROXY_METHOD_PREFIX = "com.sun.proxy";
 
-    public HibernateQueryInterceptor(HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties) {
+    public HibernateQueryInterceptor(
+            HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties
+    ) {
         this.hibernateQueryInterceptorProperties = hibernateQueryInterceptorProperties;
+    }
+
+    /**
+     * Reset the N+1 query detection state
+     */
+    private void resetNPlusOneQueryDetectionState() {
+        threadPreviouslyLoadedEntities.set(new HashSet<>());
+        threadSelectQueriesInfoPerProxyMethod.set(new HashMap<>());
+    }
+
+    /**
+     * Clear the Hibernate Session and reset the N+1 query detection state
+     * <p>
+     * Clearing the Hibernate Session is necessary to detect N+1 queries in tests as they would be in production.
+     * Otherwise, every objects created in the setup of the tests would already be loaded in the Session and would
+     * hide potential N+1 queries.
+     */
+    public void clearNPlusOneQuerySession(EntityManager entityManager) {
+        entityManager.clear();
+        this.resetNPlusOneQueryDetectionState();
     }
 
     /**
@@ -55,13 +77,17 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
-     * Increment the query count for the considered thread for each new statement if the count has been initialized
+     * Detect the N+1 queries by keeping the history of sql queries generated per proxy method.
+     * Increment the query count for the considered thread for each new statement if the count has been initialized.
      *
      * @param sql Query to be executed
      * @return Query to be executed
      */
     @Override
     public String onPrepareStatement(String sql) {
+        if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
+            updateSelectQueriesInfoPerProxyMethod(sql);
+        }
         Long count = threadQueryCount.get();
         if (count != null) {
             threadQueryCount.set(count + 1);
@@ -77,15 +103,11 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public void afterTransactionCompletion(Transaction tx) {
-        threadPreviouslyLoadedEntities.set(new HashSet<>());
-        threadProxyMethodEntityMapping.set(new HashMap<>());
+        this.resetNPlusOneQueryDetectionState();
     }
 
     /**
-     * Detect the N+1 queries by checking if two calls were made to getEntity for the same instance
-     * <p>
-     * The first call is made with the instance filled with a {@link HibernateProxy}
-     * and the second is made after a query was executed to fetch the data in the Entity
+     * Detect the N+1 queries by keeping the history of the entities previously gotten.
      *
      * @param entityName Name of the entity to get
      * @param id         Id of the entity to get
@@ -93,18 +115,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     @Override
     public Object getEntity(String entityName, Serializable id) {
         if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
-            detectNPlusOneQueriesOfMissingQueryEagerFetching(entityName, id);
-            detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(entityName, id);
-        }
-
-        Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
-
-        if (previouslyLoadedEntities.contains(entityName + id)) {
-            previouslyLoadedEntities.remove(entityName + id);
-            threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
-        } else {
-            previouslyLoadedEntities.add(entityName + id);
-            threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
+            detectNPlusOneQueriesFromMissingEagerFetchingOnAQuery(entityName, id);
+            detectNPlusOneQueriesFromClassFieldEagerFetching(entityName);
         }
 
         return null;
@@ -113,23 +125,24 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     /**
      * Detect the N+1 queries caused by a missing eager fetching configuration on a query with a lazy loaded field
      * <p>
-     * <p>
      * Detection checks:
      * - The getEntity was called twice for the couple (entity, id)
-     * <p>
      * - There is an occurrence of hibernate proxy followed by entity class in the stackTraceElements
      * Avoid detecting calls to queries like findById and queries with eager fetching on some entity fields
      *
      * @param entityName Name of the entity
      * @param id         Id of the entity objecy
-     * @return Boolean telling whether N+1 queries were detected or not
      */
-    private boolean detectNPlusOneQueriesOfMissingQueryEagerFetching(String entityName, Serializable id) {
+    private void detectNPlusOneQueriesFromMissingEagerFetchingOnAQuery(String entityName, Serializable id) {
         Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
 
         if (!previouslyLoadedEntities.contains(entityName + id)) {
-            return false;
+            previouslyLoadedEntities.add(entityName + id);
+            threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
+            return;
         }
+        previouslyLoadedEntities.remove(entityName + id);
+        threadPreviouslyLoadedEntities.set(previouslyLoadedEntities);
 
         // Detect N+1 queries by searching for newest occurrence of Hibernate proxy followed by entity class in stack
         // elements
@@ -147,7 +160,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         }
 
         if (originStackTraceElement == null) {
-            return false;
+            return;
         }
 
         String errorMessage = "N+1 queries detected on a getter of the entity " + entityName +
@@ -155,62 +168,89 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
                 "\n    Hint: Missing Eager fetching configuration on the query that fetched the object of " +
                 "type " + entityName + "\n";
         logDetectedNPlusOneQueries(errorMessage);
+    }
 
-        return true;
+    /**
+     * Update the select queries info per proxy method to be able to detect potential N+1 queries
+     * due to Eager Fetching on a field of a class
+     * <p>
+     * Checks:
+     * - Detect queries that would not fit the N+1 queries problem, non select queries, and remove the entry
+     * - Detect multiple calls to same proxy method and reset the entry to avoid false positive
+     * - Detect select queries that could be potential N+1 queries and increment the count
+     */
+    private void updateSelectQueriesInfoPerProxyMethod(String sql) {
+        Optional<String> optionalProxyMethodName = getProxyMethodName();
+        if (!optionalProxyMethodName.isPresent()) {
+            return;
+        }
+        String proxyMethodName = optionalProxyMethodName.get();
+
+        boolean isSelectQuery = sql.toLowerCase().startsWith("select");
+
+        Map<String, SelectQueriesInfo> selectQueriesInfoPerProxyMethod = threadSelectQueriesInfoPerProxyMethod.get();
+
+        // The N+1 queries problem is only related to select queries
+        // So we remove the entry when detecting non select query for the proxy method
+        if (!isSelectQuery) {
+            selectQueriesInfoPerProxyMethod.remove(proxyMethodName);
+            threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
+            return;
+        }
+
+        SelectQueriesInfo selectQueriesInfo = selectQueriesInfoPerProxyMethod.get(proxyMethodName);
+
+        // Handle several calls to the same proxy method by resetting the SelectQueriesInfo
+        // when the initial select query is detected
+        if (selectQueriesInfo == null || selectQueriesInfo.getInitialSelectQuery().equals(sql)) {
+            selectQueriesInfoPerProxyMethod.put(proxyMethodName, new SelectQueriesInfo(sql));
+            threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
+            return;
+        }
+
+        selectQueriesInfoPerProxyMethod.put(proxyMethodName, selectQueriesInfo.incrementSelectQueriesCount());
+        threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
     }
 
     /**
      * Detect the N+1 queries caused by a missing lazy fetching configuration on an entity field
      * <p>
-     * Detection checks:
-     * - The getEntity was called twice for the couple (entity, id)
-     * <p>
-     * - The query that triggered the fetching of the entity object was first called for a different entity
-     * Avoid detecting calls to queries like findById
-     *
-     * @param entityName Name of the entity
-     * @param id         Id of the entity objecy
-     * @return Boolean telling whether N+1 queries were detected or not
+     * Detection checks that several select queries were generated from the same proxy method
      */
-    private boolean detectNPlusOneQueriesOfMissingEntityFieldLazyFetching(String entityName, Serializable id) {
+    private void detectNPlusOneQueriesFromClassFieldEagerFetching(String entityName) {
         Optional<String> optionalProxyMethodName = getProxyMethodName();
         if (!optionalProxyMethodName.isPresent()) {
-            return false;
+            return;
         }
         String proxyMethodName = optionalProxyMethodName.get();
 
-        Set<String> previouslyLoadedEntities = threadPreviouslyLoadedEntities.get();
-        Map<String, String> proxyMethodEntityMapping = threadProxyMethodEntityMapping.get();
-
-        boolean nPlusOneQueriesDetected = false;
-        if (
-                previouslyLoadedEntities.contains(entityName + id)
-                        && proxyMethodEntityMapping.containsKey(proxyMethodName)
-                        && !proxyMethodEntityMapping.get(proxyMethodName).equals(entityName)
-        ) {
-            nPlusOneQueriesDetected = true;
-
-            String errorMessage = "N+1 queries detected on a query for the entity " + entityName;
-
-            // Find origin of the N+1 queries in client package
-            // by getting oldest occurrence of proxy method in stack elements
-            StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-
-            for (int i = stackTraceElements.length - 1; i >= 1; i--) {
-                if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
-                    errorMessage += "\n    at " + stackTraceElements[i].toString();
-                    break;
-                }
-            }
-
-            errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of one of the entities " +
-                    "fetched in the query\n";
-
-            logDetectedNPlusOneQueries(errorMessage);
+        Map<String, SelectQueriesInfo> selectQueriesInfoPerProxyMethod = threadSelectQueriesInfoPerProxyMethod.get();
+        SelectQueriesInfo selectQueriesInfo = selectQueriesInfoPerProxyMethod.get(proxyMethodName);
+        if (selectQueriesInfo == null || selectQueriesInfo.getSelectQueriesCount() < 2) {
+            return;
         }
 
-        proxyMethodEntityMapping.putIfAbsent(proxyMethodName, entityName);
-        return nPlusOneQueriesDetected;
+        // Reset the count to 1 to log a message once per additional query
+        selectQueriesInfoPerProxyMethod.put(proxyMethodName, selectQueriesInfo.resetSelectQueriesCount());
+        threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
+
+        String errorMessage = "N+1 queries detected with eager fetching on the entity " + entityName;
+
+        // Find origin of the N+1 queries in client package
+        // by getting oldest occurrence of proxy method in stack elements
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+        for (int i = stackTraceElements.length - 1; i >= 1; i--) {
+            if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
+                errorMessage += "\n    at " + stackTraceElements[i].toString();
+                break;
+            }
+        }
+
+        errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of type " + entityName + " of " +
+                "one of the entities fetched in the query\n";
+
+        logDetectedNPlusOneQueries(errorMessage);
     }
 
     /**
@@ -224,7 +264,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         for (int i = stackTraceElements.length - 1; i >= 0; i--) {
             StackTraceElement stackTraceElement = stackTraceElements[i];
 
-            if (stackTraceElement.getClassName().indexOf("com.sun.proxy") == 0) {
+            if (stackTraceElement.getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
                 return Optional.of(stackTraceElement.getClassName() + stackTraceElement.getMethodName());
             }
         }
@@ -249,19 +289,19 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
                 LOGGER.error(errorMessage);
                 break;
             default:
-                throw new NPlusOneQueriesException(errorMessage, new Exception(new Throwable()));
+                throw new NPlusOneQueriesException(errorMessage);
         }
     }
 }
 
-class EmptySetSupplier implements Supplier<Set<String>> {
-    public Set<String> get() {
+class EmptySetSupplier<T> implements Supplier<Set<T>> {
+    public Set<T> get() {
         return new HashSet<>();
     }
 }
 
-class EmptyMapSupplier implements Supplier<Map<String, String>> {
-    public Map<String, String> get() {
+class EmptyMapSupplier<T> implements Supplier<Map<String, T>> {
+    public Map<String, T> get() {
         return new HashMap<>();
     }
 }
