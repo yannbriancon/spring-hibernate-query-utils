@@ -66,10 +66,15 @@ class NPlusOneQueriesExceptionTest {
                 .collect(Collectors.toList());
     }
 
+    @Test
+    void nPlusOneQueriesDetection_isNotThrowingExceptionWhenLoopingOnSameMethod() {
+        for (Long id = 0L; id < 2; id++) {
+            messageRepository.findById(id);
+        }
+    }
 
     @Test
-    void hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnManyToOne() {
-
+    void nPlusOneQueriesDetection_throwsExceptionWhenMissingEagerFetchingOnManyToOne() {
         try {
             // Test a method that should return a N+1 query
             // The query triggers N+1 queries to eager fetch the user field
