@@ -1,7 +1,6 @@
 package com.yannbriancon.interceptor;
 
 import com.yannbriancon.exception.NPlusOneQueriesException;
-import com.yannbriancon.utils.entity.Avatar;
 import com.yannbriancon.utils.entity.Message;
 import com.yannbriancon.utils.entity.User;
 import com.yannbriancon.utils.repository.AvatarRepository;
@@ -78,13 +77,13 @@ class NPlusOneQueriesExceptionTest {
         try {
             // Test a method that should return a N+1 query
             // The query triggers N+1 queries to eager fetch the user field
-            List<Avatar> avatars = avatarRepository.findAll();
+            avatarRepository.findAll();
             assert false;
         } catch (NPlusOneQueriesException exception) {
             assertThat(exception.getMessage())
-                    .contains("N+1 queries detected with eager fetching on the query\n" +
+                    .contains("N+1 queries detected with eager fetching on the entity com.yannbriancon.utils.entity.User\n" +
                             "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest" +
-                            ".hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnManyToOne");
+                            ".nPlusOneQueriesDetection_throwsExceptionWhenMissingEagerFetchingOnManyToOne");
         }
     }
 
