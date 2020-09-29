@@ -1,11 +1,11 @@
-package com.yannbriancon.interceptor;
+package com.yannbriancon.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.io.Serializable;
 
 @ConfigurationProperties("spring-hibernate-query-utils.n-plus-one-queries-detection")
-public class HibernateQueryInterceptorProperties implements Serializable {
+public class NPlusOneQueriesDetectionProperties implements Serializable {
     public enum ErrorLevel {
         INFO,
         WARN,
