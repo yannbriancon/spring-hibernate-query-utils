@@ -4,9 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.io.Serializable;
 
-@ConfigurationProperties("hibernate.query.interceptor")
+@ConfigurationProperties("spring-hibernate-query-utils.n-plus-one-queries-detection")
 public class HibernateQueryInterceptorProperties implements Serializable {
-    enum ErrorLevel {
+    public enum ErrorLevel {
         INFO,
         WARN,
         ERROR,
@@ -14,25 +14,28 @@ public class HibernateQueryInterceptorProperties implements Serializable {
     }
 
     /**
-     * Error level for the N+1 queries detection.
+     * Error level for the N+1 queries detection
      */
-    private ErrorLevel errorLevel = ErrorLevel.ERROR;
+    private ErrorLevel errorLevel = ErrorLevel.valueOf("ERROR");
 
-    private boolean nPlusOneDetectionEnabled = true;
+    /**
+     * Boolean allowing to enable or disable the N+1 queries detection
+     */
+    private boolean enabled = true;
 
     public ErrorLevel getErrorLevel() {
         return errorLevel;
     }
 
-    public void setErrorLevel(String errorLevel) {
-        this.errorLevel = ErrorLevel.valueOf(errorLevel);
+    public void setErrorLevel(ErrorLevel errorLevel) {
+        this.errorLevel = errorLevel;
     }
 
-    public boolean isnPlusOneDetectionEnabled() {
-        return nPlusOneDetectionEnabled;
+    public boolean isEnabled() {
+        return enabled;
     }
 
-    public void setnPlusOneDetectionEnabled(boolean nPlusOneDetectionEnabled) {
-        this.nPlusOneDetectionEnabled = nPlusOneDetectionEnabled;
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

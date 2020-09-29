@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest("hibernate.query.interceptor.error-level=EXCEPTION")
+@SpringBootTest("spring-hibernate-query-utils.n-plus-one-queries-detection.error-level=EXCEPTION")
 @Transactional
 class NPlusOneQueriesExceptionTest {
 

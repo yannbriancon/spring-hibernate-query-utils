@@ -31,15 +31,15 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
-    private final HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties;
+    private final HibernateQueryInterceptorProperties HibernateQueryInterceptorProperties;
 
     private static final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
     private static final String PROXY_METHOD_PREFIX = "com.sun.proxy";
 
     public HibernateQueryInterceptor(
-            HibernateQueryInterceptorProperties hibernateQueryInterceptorProperties
+            HibernateQueryInterceptorProperties HibernateQueryInterceptorProperties
     ) {
-        this.hibernateQueryInterceptorProperties = hibernateQueryInterceptorProperties;
+        this.HibernateQueryInterceptorProperties = HibernateQueryInterceptorProperties;
     }
 
     /**
@@ -85,7 +85,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public String onPrepareStatement(String sql) {
-        if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
+        if (HibernateQueryInterceptorProperties.isEnabled()) {
             updateSelectQueriesInfoPerProxyMethod(sql);
         }
         Long count = threadQueryCount.get();
@@ -114,7 +114,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public Object getEntity(String entityName, Serializable id) {
-        if (hibernateQueryInterceptorProperties.isnPlusOneDetectionEnabled()) {
+        if (HibernateQueryInterceptorProperties.isEnabled()) {
             detectNPlusOneQueriesFromMissingEagerFetchingOnAQuery(entityName, id);
             detectNPlusOneQueriesFromClassFieldEagerFetching(entityName);
         }
@@ -278,7 +278,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      * @param errorMessage Error message for the N+1 queries detected
      */
     private void logDetectedNPlusOneQueries(String errorMessage) {
-        switch (hibernateQueryInterceptorProperties.getErrorLevel()) {
+        switch (HibernateQueryInterceptorProperties.getErrorLevel()) {
             case INFO:
                 LOGGER.info(errorMessage);
                 break;
@@ -288,8 +288,10 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
             case ERROR:
                 LOGGER.error(errorMessage);
                 break;
-            default:
+            case EXCEPTION:
                 throw new NPlusOneQueriesException(errorMessage);
+            default:
+                break;
         }
     }
 }
