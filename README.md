@@ -43,7 +43,10 @@
 * [Usage](#usage)
   * [N+1 Queries Detection](#n1-queries-detection)
     * [Detection](#detection)
+      * [Detection in test with fixtures](#detection-in-test-with-fixtures)
     * [Configuration](#configuration)
+      * [Enable](#enable)
+      * [Error level](#error-level)
   * [Query Count](#query-count)
 * [Changelog](#changelog)
 * [License](#license)
@@ -105,9 +108,9 @@ Each time N+1 queries are detected in a transaction, a log of level error will b
 
 Two types of N+1 queries are detected:
 
-- N+1 queries caused by a field needed but not eager fetched on a specific query
+- N+1 queries triggered on a getter caused by a field needed but not eager fetched on a specific query
 
-- N+1 queries caused by an entity field not configured to be fetched lazily
+- N+1 queries triggered on a query caused by an entity field not configured to be fetched lazily
 
 Here is an example catching the error log for the first type of N+1 queries:
 
@@ -146,18 +149,62 @@ class NPlusOneQueriesLoggingTest {
 
         LoggingEvent loggingEvent = loggingEventCaptor.getAllValues().get(0);
         assertThat(loggingEvent.getMessage())
-                .isEqualTo("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
-                        "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0" +
-                        "(NPlusOneQueriesLoggingTest.java:61)\n" +
-                        "    Hint: Missing Eager fetching configuration on the query that fetched the object of type" +
-                        " com.yannbriancon.utils.entity.User\n");
+                        "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0");
         assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
     }
 }
 ```
 
+##### Detection in test with fixtures
+
+If a setup is present in your test to add the data necessary for testing, Hibernate will load all the data in its 
+state. This will hide potential N+1 queries in the method you test.
+
+To avoid this, a method is available to clear the Hibernate state and the N+1 queries detection state.
+
+Here is an example:
+
+```java
+@Test
+void nPlusOneQueriesDetection_throwsExceptionWhenSessionIsCleared() {
+    User author = new User("author");
+    userRepository.saveAndFlush(author);
+    Message newMessage = new Message("text", author);
+    messageRepository.saveAndFlush(newMessage);
+
+    // Test a method that should return a N+1 query
+    // The method does not return an exception because we just created the message so it is loaded in the Session
+    getMessageAuthorNameWithNPlusOneQuery(newMessage.getId());
+
+    // Clear the session to be able to correctly detect the N+1 queries in the tests
+    hibernateQueryInterceptor.clearNPlusOneQuerySession(entityManager);
+
+    try {
+        // Test a method that should return a N+1 query
+        // This time the Session is empty and the N+1 query is detected
+        getMessageAuthorNameWithNPlusOneQuery(newMessage.getId());
+        assert false;
+    } catch (NPlusOneQueriesException exception) {
+        assertThat(exception.getMessage())
+                .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
+                        "    at com.yannbriancon.interceptor.NPlusOneQueriesExceptionTest" +
+                        ".getMessageAuthorNameWithNPlusOneQuery");
+    }
+}
+```
+
 #### Configuration
+
+##### Enable
+
+By default the detection of N+1 queries is enabled for every profile.
+
+To disable it, you can set the property `spring-hibernate-query-utils.n-plus-one-queries-detection.error-level` to false.
+
+
+##### Error level
 
 By default the detection of N+1 queries logs an error to avoid breaking your code. 
 
@@ -166,7 +213,7 @@ However, my advice is to override the default error level to throw exceptions fo
 Now you will easily detect which tests are failing and be able to flag them and set the error level to error logs only on 
 those tests while you are fixing them.
 
-To do this, you can configure the error level when N+1 queries is detected using the property `hibernate.query.interceptor.error-level`. 
+To do this, you can configure the error level when N+1 queries is detected using the property `spring-hibernate-query-utils.n-plus-one-queries-detection.error-level`. 
 
 4 levels are available to handle the detection of N+1 queries:
 
@@ -237,6 +284,11 @@ public class NotificationResourceIntTest {
 
 See [`CHANGELOG`][changelog-url] for more information.
 
+<!-- CONTRIBUTING -->
+## Contributing
+
+See [`CONTRIBUTING`][contributing] for more information.
+
 
 <!-- LICENSE -->
 ## License
@@ -266,3 +318,4 @@ Project Link: [https://github.com/yannbriancon/spring-hibernate-query-utils](htt
 [license-shield]: https://img.shields.io/github/license/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
 [license-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/LICENSE
 [changelog-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CHANGELOG
+[contributing]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CONTRIBUTING
