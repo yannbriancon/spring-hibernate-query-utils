@@ -85,12 +85,12 @@ This library provides several benefits:
 ### Installation
 ##### Maven
 
-Add the dependency to your project inside your `pom.xml` file
+Add the dependency to your project inside your `pom.xml` file with the right version
 ```xml
 <dependency>
     <groupId>com.yannbriancon</groupId>
     <artifactId>spring-hibernate-query-utils</artifactId>
-    <version>1.0.3</version>
+    <version>X.X.X</version>
 </dependency>
 ```
 
