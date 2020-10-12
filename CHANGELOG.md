@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0]
+### Added
+- Make autocomplete work for N+1 queries detection properties.
+- Add more precise detection to
+    - Avoid false positive with multiple calls to same method
+    - Detect undetected N+1 queries caused by eager fetching
+- Add a new method to clear Hibernate session state and avoid missed detection because of test setup 
+- Add new property to enable or disable N+1 queries detection
+
+### Changed
+- Rename N+1 queries detection properties.
+
+### Removed
+- Remove unused application properties
+
 ## [1.0.3] - 2020-05-10
 ### Added
 - Add back a more specific detection of N+1 queries due to missing lazy fetching.

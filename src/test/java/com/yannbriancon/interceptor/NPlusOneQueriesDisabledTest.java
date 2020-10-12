@@ -2,7 +2,6 @@ package com.yannbriancon.interceptor;
 
 import com.yannbriancon.utils.entity.Message;
 import com.yannbriancon.utils.repository.MessageRepository;
-
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +15,10 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(properties = { "hibernate.query.interceptor.error-level=EXCEPTION", "hibernate.query.interceptor.n-plus-one-detection-enabled=false" })
+@SpringBootTest(properties = {
+        "spring-hibernate-query-utils.n-plus-one-queries-detection.error-level=EXCEPTION",
+        "spring-hibernate-query-utils.n-plus-one-queries-detection.enabled=false"
+})
 @Transactional
 class NPlusOneQueriesDisabledTest {
 
@@ -35,8 +37,8 @@ class NPlusOneQueriesDisabledTest {
 
         // Trigger N+1 queries, if this WAS enabled, it would throw an exception and fail the test.
         messages.stream()
-            .map(message -> message.getAuthor().getName())
-            .collect(Collectors.toList());
+                .map(message -> message.getAuthor().getName())
+                .collect(Collectors.toList());
 
         //Assert that counting still runs when n+1 detection is disabled
         assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(2);
