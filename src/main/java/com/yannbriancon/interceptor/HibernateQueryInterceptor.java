@@ -11,11 +11,8 @@ import org.springframework.stereotype.Component;
 
 import javax.persistence.EntityManager;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 @Component
@@ -36,6 +33,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     private static final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
     private static final String PROXY_METHOD_PREFIX = "com.sun.proxy";
+    private transient Predicate<String> filter;
 
     public HibernateQueryInterceptor(
             NPlusOneQueriesDetectionProperties NPlusOneQueriesDetectionProperties
@@ -71,15 +69,28 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     }
 
     /**
+     * Start or reset the query count to 0 for the considered thread.
+     * Counts only if given filter matches.
+     *
+     * @param filter string filter predicate
+     */
+    public void startQueryCount(Predicate<String> filter) {
+        this.filter = filter;
+        startQueryCount();
+    }
+
+    /**
      * Get the query count for the considered thread
      */
     public Long getQueryCount() {
+        this.filter = null;
         return threadQueryCount.get();
     }
 
     /**
      * Detect the N+1 queries by keeping the history of sql queries generated per proxy method.
      * Increment the query count for the considered thread for each new statement if the count has been initialized.
+     * If a query filter is set it will be preferred.
      *
      * @param sql Query to be executed
      * @return Query to be executed
@@ -91,7 +102,13 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         }
         Long count = threadQueryCount.get();
         if (count != null) {
-            threadQueryCount.set(count + 1);
+            if (Objects.nonNull(filter)) {
+                if (filter.test(sql)) {
+                    threadQueryCount.set(count + 1);
+                }
+            } else {
+                threadQueryCount.set(count + 1);
+            }
         }
         return super.onPrepareStatement(sql);
     }

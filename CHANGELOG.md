@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0]
 ### Added
+- Accept filter criteria for query counting
 - Make autocomplete work for N+1 queries detection properties.
 - Add more precise detection to
     - Avoid false positive with multiple calls to same method
