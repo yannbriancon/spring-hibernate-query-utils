@@ -317,5 +317,5 @@ Project Link: [https://github.com/yannbriancon/spring-hibernate-query-utils](htt
 [issues-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/issues
 [license-shield]: https://img.shields.io/github/license/yannbriancon/spring-hibernate-query-utils.svg?style=flat-square
 [license-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/LICENSE
-[changelog-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CHANGELOG
-[contributing]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CONTRIBUTING
+[changelog-url]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CHANGELOG.md
+[contributing]: https://github.com/yannbriancon/spring-hibernate-query-utils/blob/master/CONTRIBUTING.md
