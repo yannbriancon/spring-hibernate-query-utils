@@ -46,7 +46,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
     /**
      * Reset the N+1 query detection state
      */
-    private void resetNPlusOneQueryDetectionState() {
+    public void resetNPlusOneQueryDetectionState() {
         threadPreviouslyLoadedEntities.set(new HashSet<>());
         threadSelectQueriesInfoPerProxyMethod.set(new HashMap<>());
     }

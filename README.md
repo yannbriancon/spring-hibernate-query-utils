@@ -279,6 +279,19 @@ public class NotificationResourceIntTest {
 }
 ```
 
+### Reset Query Detection State on each Request
+SpringBoot/Tomcat is reusing executer threads. This can lead to wrong N+1 detection due to old queries in ThreadLocal.
+Register following interceptor in you WebMvcConfigurer:
+
+```java
+@Override
+public void addInterceptors(InterceptorRegistry registry) {
+    registry.addInterceptor(applicationContext.getBean(HibernateQueryOnRequestResetInterceptor.class));
+}
+```
+
+
+
 <!-- CHANGELOG -->
 ## Changelog
 
