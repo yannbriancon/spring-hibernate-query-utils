@@ -68,7 +68,7 @@ class NPlusOneQueriesLoggingTest {
                 .contains("N+1 queries detected on a getter of the entity com.yannbriancon.utils.entity.User\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
                         "lambda$hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingEagerFetchingOnQuery$0");
-        assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
+        assertThat(loggingEvent.getLevel()).isEqualTo(Level.ERROR);
     }
 
     @Test
@@ -83,7 +83,7 @@ class NPlusOneQueriesLoggingTest {
                 .contains("N+1 queries detected with eager fetching on the entity com.yannbriancon.utils.entity.Message\n" +
                         "    at com.yannbriancon.interceptor.NPlusOneQueriesLoggingTest." +
                         "hibernateQueryInterceptor_isDetectingNPlusOneQueriesWhenMissingLazyFetchingOnEntityField");
-        assertThat(Level.ERROR).isEqualTo(loggingEvent.getLevel());
+        assertThat(loggingEvent.getLevel()).isEqualTo(Level.ERROR);
     }
 
 

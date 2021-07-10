@@ -235,7 +235,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         selectQueriesInfoPerProxyMethod.put(proxyMethodName, selectQueriesInfo.resetSelectQueriesCount());
         threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
 
-        String errorMessage = "N+1 queries detected with eager fetching on the entity " + entityName;
+        StringBuilder errorMessage = new StringBuilder("N+1 queries detected with eager fetching on the entity ").append(entityName);
 
         // Find origin of the N+1 queries in client package
         // by getting oldest occurrence of proxy method in stack elements
@@ -243,15 +243,14 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
         for (int i = stackTraceElements.length - 1; i >= 1; i--) {
             if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
-                errorMessage += "\n    at " + stackTraceElements[i].toString();
+                errorMessage.append("\n    at ").append(stackTraceElements[i].toString());
                 break;
             }
         }
 
-        errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of type " + entityName + " of " +
-                "one of the entities fetched in the query\n";
+        errorMessage.append("\n    Hint: Missing Lazy fetching configuration on a field of type ").append(entityName).append(" of ").append("one of the entities fetched in the query\n");
 
-        logDetectedNPlusOneQueries(errorMessage);
+        logDetectedNPlusOneQueries(errorMessage.toString());
     }
 
     /**
