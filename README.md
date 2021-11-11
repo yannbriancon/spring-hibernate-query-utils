@@ -201,7 +201,7 @@ void nPlusOneQueriesDetection_throwsExceptionWhenSessionIsCleared() {
 
 By default the detection of N+1 queries is enabled for every profile.
 
-To disable it, you can set the property `spring-hibernate-query-utils.n-plus-one-queries-detection.error-level` to false.
+To disable it, you can set the property `spring-hibernate-query-utils.n-plus-one-queries-detection.enabled` to false.
 
 
 ##### Error level
@@ -226,12 +226,12 @@ Here are two examples on how to use it globally or for a specific test:
 
 * In application.properties:
 ```yaml
-hibernate.query.interceptor.error-level=INFO
+spring-hibernate-query-utils.n-plus-one-queries-detection.error-level=INFO
 ```
 
 * In tests:
 ```java
-@SpringBootTest("hibernate.query.interceptor.error-level=INFO")
+@SpringBootTest("spring-hibernate-query-utils.n-plus-one-queries-detection.error-level=INFO")
 @Transactional
 class NPlusOneQueriesLoggingTest {
     ...
