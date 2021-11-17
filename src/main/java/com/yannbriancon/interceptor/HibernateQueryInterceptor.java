@@ -11,11 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.persistence.EntityManager;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 @Component
@@ -57,6 +53,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      * Clearing the Hibernate Session is necessary to detect N+1 queries in tests as they would be in production.
      * Otherwise, every objects created in the setup of the tests would already be loaded in the Session and would
      * hide potential N+1 queries.
+     *
+     * @param entityManager EntityManager for the session
      */
     public void clearNPlusOneQuerySession(EntityManager entityManager) {
         entityManager.clear();
@@ -72,6 +70,8 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     /**
      * Get the query count for the considered thread
+     *
+     * @return The query count
      */
     public Long getQueryCount() {
         return threadQueryCount.get();
