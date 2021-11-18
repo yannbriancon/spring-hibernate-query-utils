@@ -89,8 +89,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
 
     /**
      * Detect the N+1 queries by keeping the history of sql queries generated per proxy method.
-     * Increment the query count for the considered thread for each new statement if the count has been initialized.
-     * If a query filter is set it will be preferred.
+     * Increment the query count for the considered thread for each new statement if the count has been initialized and the filter matches.
      *
      * @param sql Query to be executed
      * @return Query to be executed
