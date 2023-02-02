@@ -53,6 +53,16 @@ class QueryCountTest {
         assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(1);
     }
 
+    @Test
+    void queryCount_WithoutFilter() {
+        hibernateQueryInterceptor.startQueryCount();
+        userRepository.saveAndFlush(new User());
+
+        messageRepository.findAll();
+
+        assertThat(hibernateQueryInterceptor.getQueryCount()).isEqualTo(2);
+    }
+
     @ParameterizedTest
     @MethodSource("prepareQueryCountWithStartsWithFilterData")
     void queryCountWithStartsWithFilter(String filter, int expectedQueryCount) {

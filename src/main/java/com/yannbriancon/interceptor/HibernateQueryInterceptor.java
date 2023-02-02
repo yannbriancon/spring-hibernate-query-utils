@@ -19,26 +19,26 @@ import java.util.function.Supplier;
 @EnableConfigurationProperties(NPlusOneQueriesDetectionProperties.class)
 public class HibernateQueryInterceptor extends EmptyInterceptor {
 
-    private transient ThreadLocal<Long> threadQueryCount = new ThreadLocal<>();
+    private final transient ThreadLocal<Long> threadQueryCount = new ThreadLocal<>();
 
-    private transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
+    private final transient ThreadLocal<Set<String>> threadPreviouslyLoadedEntities =
             ThreadLocal.withInitial(new EmptySetSupplier<>());
 
-    private transient ThreadLocal<Map<String, SelectQueriesInfo>> threadSelectQueriesInfoPerProxyMethod =
+    private final transient ThreadLocal<Map<String, SelectQueriesInfo>> threadSelectQueriesInfoPerProxyMethod =
             ThreadLocal.withInitial(new EmptyMapSupplier<>());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HibernateQueryInterceptor.class);
 
-    private final NPlusOneQueriesDetectionProperties NPlusOneQueriesDetectionProperties;
+    private final NPlusOneQueriesDetectionProperties nPlusOneQueriesDetectionProperties;
 
     private static final String HIBERNATE_PROXY_PREFIX = "org.hibernate.proxy";
     private static final String PROXY_METHOD_PREFIX = "com.sun.proxy";
-    private transient Predicate<String> filter;
+    private transient ThreadLocal<Predicate<String>> queryFilter;
 
     public HibernateQueryInterceptor(
-            NPlusOneQueriesDetectionProperties NPlusOneQueriesDetectionProperties
+            NPlusOneQueriesDetectionProperties nPlusOneQueriesDetectionProperties
     ) {
-        this.NPlusOneQueriesDetectionProperties = NPlusOneQueriesDetectionProperties;
+        this.nPlusOneQueriesDetectionProperties = nPlusOneQueriesDetectionProperties;
     }
 
     /**
@@ -65,7 +65,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      * Start or reset the query count to 0 for the considered thread
      */
     public void startQueryCount() {
-        threadQueryCount.set(0L);
+        startQueryCount(null);
     }
 
     /**
@@ -75,15 +75,15 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      * @param filter string filter predicate
      */
     public void startQueryCount(Predicate<String> filter) {
-        this.filter = filter;
-        startQueryCount();
+        this.queryFilter = new ThreadLocal<>();
+        this.queryFilter.set(filter);
+        threadQueryCount.set(0L);
     }
 
     /**
      * Get the query count for the considered thread
      */
     public Long getQueryCount() {
-        this.filter = null;
         return threadQueryCount.get();
     }
 
@@ -96,18 +96,12 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public String onPrepareStatement(String sql) {
-        if (NPlusOneQueriesDetectionProperties.isEnabled()) {
+        if (nPlusOneQueriesDetectionProperties.isEnabled()) {
             updateSelectQueriesInfoPerProxyMethod(sql);
         }
         Long count = threadQueryCount.get();
-        if (count != null) {
-            if (Objects.nonNull(filter)) {
-                if (filter.test(sql)) {
-                    threadQueryCount.set(count + 1);
-                }
-            } else {
-                threadQueryCount.set(count + 1);
-            }
+        if (count != null && (Objects.isNull(queryFilter.get()) || queryFilter.get().test(sql))) {
+            threadQueryCount.set(count + 1);
         }
         return super.onPrepareStatement(sql);
     }
@@ -131,7 +125,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      */
     @Override
     public Object getEntity(String entityName, Serializable id) {
-        if (NPlusOneQueriesDetectionProperties.isEnabled()) {
+        if (nPlusOneQueriesDetectionProperties.isEnabled()) {
             detectNPlusOneQueriesFromMissingEagerFetchingOnAQuery(entityName, id);
             detectNPlusOneQueriesFromClassFieldEagerFetching(entityName);
         }
@@ -251,23 +245,23 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
         selectQueriesInfoPerProxyMethod.put(proxyMethodName, selectQueriesInfo.resetSelectQueriesCount());
         threadSelectQueriesInfoPerProxyMethod.set(selectQueriesInfoPerProxyMethod);
 
-        String errorMessage = "N+1 queries detected with eager fetching on the entity " + entityName;
+        StringBuilder errorMessage = new StringBuilder();
+        errorMessage.append("N+1 queries detected with eager fetching on the entity ").append(entityName);
 
         // Find origin of the N+1 queries in client package
-        // by getting oldest occurrence of proxy method in stack elements
+        // by getting the oldest occurrence of proxy method in stack elements
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
 
         for (int i = stackTraceElements.length - 1; i >= 1; i--) {
             if (stackTraceElements[i - 1].getClassName().indexOf(PROXY_METHOD_PREFIX) == 0) {
-                errorMessage += "\n    at " + stackTraceElements[i].toString();
+                errorMessage.append("\n    at ").append(stackTraceElements[i].toString());
                 break;
             }
         }
 
-        errorMessage += "\n    Hint: Missing Lazy fetching configuration on a field of type " + entityName + " of " +
-                "one of the entities fetched in the query\n";
+        errorMessage.append("\n    Hint: Missing Lazy fetching configuration on a field of type ").append(entityName).append(" of ").append("one of the entities fetched in the query\n");
 
-        logDetectedNPlusOneQueries(errorMessage);
+        logDetectedNPlusOneQueries(errorMessage.toString());
     }
 
     /**
@@ -295,7 +289,7 @@ public class HibernateQueryInterceptor extends EmptyInterceptor {
      * @param errorMessage Error message for the N+1 queries detected
      */
     private void logDetectedNPlusOneQueries(String errorMessage) {
-        switch (NPlusOneQueriesDetectionProperties.getErrorLevel()) {
+        switch (nPlusOneQueriesDetectionProperties.getErrorLevel()) {
             case INFO:
                 LOGGER.info(errorMessage);
                 break;
