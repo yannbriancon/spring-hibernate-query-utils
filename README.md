@@ -1,3 +1,14 @@
+# ⚠️ Project Unmaintained
+
+This project is **no longer actively maintained**.  
+We are actively **looking for maintainers** to help take it forward.  
+
+If interested, please open an issue or contact the repository owner.
+
+---
+
+
+
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
